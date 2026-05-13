@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>階層突破ハクスラRPG</title>
+<style>
+body{
+  margin:0;
+  background:#15151a;
+  color:white;
+  font-family:sans-serif;
+  text-align:center;
+}
+h1{font-size:32px;margin:18px 0;}
+.box{
+  width:92%;
+  max-width:430px;
+  margin:10px auto;
+  padding:14px;
+  background:#24242c;
+  border-radius:12px;
+}
+.status{
+  text-align:left;
+  line-height:1.8;
+  font-size:18px;
+}
+.hpbar{
+  width:100%;
+  height:22px;
+  background:#555;
+  border-radius:12px;
+  overflow:hidden;
+  margin:8px 0;
+}
+.hp{
+  height:100%;
+  background:#e53935;
+  width:100%;
+}
+button{
+  padding:10px 18px;
+  margin:6px;
+  font-size:16px;
+  border:none;
+  border-radius:8px;
+}
+#log{
+  min-height:60px;
+  color:#ffd54f;
+  font-size:16px;
+}
+</style>
+</head>
+<body>
+
+<h1>階層突破ハクスラRPG</h1>
+
+<div class="box">
+  <h2 id="floorText">1F</h2>
+  <div>敵：<span id="enemyName"></span></div>
+  <div class="hpbar"><div id="enemyHpBar" class="hp"></div></div>
+  <div id="enemyHpText"></div>
+</div>
+
+<div class="box status">
+  <div>Lv：<span id="level"></span></div>
+  <div>EXP：<span id="exp"></span> / <span id="needExp"></span></div>
+  <div>HP：<span id="playerHp"></span> / <span id="playerMaxHp"></span></div>
+  <div>攻撃：<span id="atk"></span></div>
+  <div>防御：<span id="def"></span></div>
+  <div>攻撃速度：<span id="speed"></span> 秒</div>
+  <div>ステータスポイント：<span id="points"></span></div>
+</div>
+
+<div class="box status">
+  <div>ゴールド：<span id="gold"></span></div>
+  <div>ガチャアイテム：<span id="gachaItem"></span></div>
+  <div>強化素材：<span id="upgradeItem"></span></div>
+</div>
+
+<div class="box">
+  <button onclick="usePoint('hp')">HP強化</button>
+  <button onclick="usePoint('atk')">攻撃強化</button>
+  <button onclick="usePoint('def')">防御強化</button>
+  <br>
+  <button onclick="goldUpgrade('atk')">ゴールドで攻撃強化</button>
+  <button onclick="goldUpgrade('def')">ゴールドで防御強化</button>
+</div>
+
+<div class="box">
+  <div id="log"></div>
+</div>
+
+<script>
+let save = JSON.parse(localStorage.getItem("hackRpgSave"));
+
+let player = save || {
+  floor:1,
+  level:1,
+  exp:0,
+  gold:0,
+  gachaItem:0,
+  upgradeItem:0,
+  point:0,
+
+  hp:100,
+  maxHp:100,
+  atk:10,
+  def:3,
+  speed:1.2,
+
+  goldAtkLv:0,
+  goldDefLv:0
+};
+
+let enemy = {};
+let battleTimer = null;
+
+function needExp(){
+  return Math.floor(50 * Math.pow(1.25, player.level - 1));
+}
+
+function makeEnemy(){
+  const isBoss = player.floor % 5 === 0;
+
+  enemy = {
+    name:isBoss ? "ボス" : "モンスター",
+    maxHp:Math.floor((40 + player.floor * 15) * (isBoss ? 3 : 1)),
+    hp:0,
+    atk:Math.floor((5 + player.floor * 2) * (isBoss ? 1.8 : 1)),
+    def:Math.floor(player.floor * 0.8),
+    isBoss
+  };
+
+  enemy.hp = enemy.maxHp;
+  log((isBoss ? "ボス出現！" : "敵出現！") + " " + player.floor + "F");
+  draw();
+}
+
+function playerAttack(){
+  if(enemy.hp <= 0) return;
+
+  let damage = Math.max(1, player.atk - enemy.def);
+
+  enemy.hp -= damage;
+
+  if(enemy.hp <= 0){
+    enemy.hp = 0;
+    winBattle();
+  }
+
+  draw();
+}
+
+function enemyAttack(){
+  if(enemy.hp <= 0) return;
+
+  let damage = Math.max(1, enemy.atk - player.def);
+
+  player.hp -= damage;
+
+  if(player.hp <= 0){
+    player.hp = player.maxHp;
+    player.floor = Math.max(1, player.floor - 1);
+    log("敗北……1階層戻った");
+    makeEnemy();
+  }
+
+  draw();
+  saveGame();
+}
+
+function winBattle(){
+  const bossBonus = enemy.isBoss ? 5 : 1;
+
+  const gold = Math.floor((20 + player.floor * 8) * bossBonus);
+  const exp = Math.floor((15 + player.floor * 5) * bossBonus);
+  const gacha = enemy.isBoss ? 3 : 1;
+  const upgrade = enemy.isBoss ? 5 : 1;
+
+  player.gold += gold;
+  player.exp += exp;
+  player.gachaItem += gacha;
+  player.upgradeItem += upgrade;
+
+  log(enemy.name + "撃破！ +" + gold + "G +" + exp + "EXP");
+
+  while(player.exp >= needExp()){
+    player.exp -= needExp();
+    player.level++;
+    player.point += 3;
+    player.maxHp += 10;
+    player.hp = player.maxHp;
+    log("レベルアップ！ Lv" + player.level);
+  }
+
+  player.floor++;
+  saveGame();
+
+  setTimeout(makeEnemy,700);
+}
+
+function usePoint(type){
+  if(player.point <= 0){
+    log("ステータスポイントが足りない");
+    return;
+  }
+
+  player.point--;
+
+  if(type === "hp"){
+    player.maxHp += 20;
+    player.hp += 20;
+    log("HP強化！");
+  }
+
+  if(type === "atk"){
+    player.atk += 3;
+    log("攻撃強化！");
+  }
+
+  if(type === "def"){
+    player.def += 2;
+    log("防御強化！");
+  }
+
+  saveGame();
+  draw();
+}
+
+function goldUpgrade(type){
+  let lv = type === "atk" ? player.goldAtkLv : player.goldDefLv;
+  let cost = Math.floor(100 * Math.pow(1.18, lv));
+
+  if(player.gold < cost){
+    log("ゴールドが足りない 必要：" + cost + "G");
+    return;
+  }
+
+  player.gold -= cost;
+
+  if(type === "atk"){
+    player.goldAtkLv++;
+    player.atk += 5;
+    log("ゴールドで攻撃強化！");
+  }
+
+  if(type === "def"){
+    player.goldDefLv++;
+    player.def += 3;
+    log("ゴールドで防御強化！");
+  }
+
+  saveGame();
+  draw();
+}
+
+function draw(){
+  document.getElementById("floorText").textContent = player.floor + "F";
+  document.getElementById("enemyName").textContent = enemy.name || "";
+  document.getElementById("enemyHpText").textContent = enemy.hp + " / " + enemy.maxHp;
+  document.getElementById("enemyHpBar").style.width = enemy.maxHp ? (enemy.hp / enemy.maxHp * 100) + "%" : "100%";
+
+  document.getElementById("level").textContent = player.level;
+  document.getElementById("exp").textContent = player.exp;
+  document.getElementById("needExp").textContent = needExp();
+  document.getElementById("playerHp").textContent = player.hp;
+  document.getElementById("playerMaxHp").textContent = player.maxHp;
+  document.getElementById("atk").textContent = player.atk;
+  document.getElementById("def").textContent = player.def;
+  document.getElementById("speed").textContent = player.speed;
+  document.getElementById("points").textContent = player.point;
+
+  document.getElementById("gold").textContent = player.gold;
+  document.getElementById("gachaItem").textContent = player.gachaItem;
+  document.getElementById("upgradeItem").textContent = player.upgradeItem;
+}
+
+function log(text){
+  document.getElementById("log").textContent = text;
+}
+
+function saveGame(){
+  localStorage.setItem("hackRpgSave", JSON.stringify(player));
+}
+
+function startBattle(){
+  makeEnemy();
+
+  if(battleTimer) clearInterval(battleTimer);
+
+  battleTimer = setInterval(()=>{
+    playerAttack();
+    enemyAttack();
+  }, player.speed * 1000);
+}
+
+startBattle();
+draw();
+</script>
+
+</body>
+</html>
