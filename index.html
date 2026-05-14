@@ -4,11 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>階層突破ハクスラRPG</title>
-
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
 
+<body>
 <div id="game">
 
   <div id="battleTab">
@@ -47,15 +46,21 @@
         <option value="power">戦力順</option>
         <option value="upgrade">強化順</option>
         <option value="awake">覚醒順</option>
+        <option value="exp">経験値OP</option>
+        <option value="gold">ゴールドOP</option>
+        <option value="gacha">ガチャOP</option>
+        <option value="upgradeMat">強化素材OP</option>
+        <option value="awakeMat">覚醒素材OP</option>
+        <option value="speed">ゲーム速度OP</option>
+        <option value="multi">連撃OP</option>
+        <option value="skip">階層スキップOP</option>
       </select>
 
       <div class="small">一括売却</div>
       <div id="bulkSellButtons"></div>
 
       <div class="small">自動売却</div>
-      <select id="autoSellSelect"
-        onchange="setAutoSell(this.value)">
-      </select>
+      <select id="autoSellSelect" onchange="setAutoSell(this.value)"></select>
 
       <div id="equipList"></div>
     </div>
@@ -63,20 +68,86 @@
 
   <div id="playerTab" class="hidden">
     <div class="panel">
-      <div class="big">強化</div>
+      <div class="big">ステータスポイント強化</div>
 
       <div>
         ポイント：
         <span id="point"></span>
       </div>
 
-      <div id="playerUpgradeArea"></div>
+      <div class="item">
+        <b>HP強化</b>
+        <div id="hpPointInfo"></div>
+        <button onclick="addStat('hp',1)">+1</button>
+        <button onclick="addStat('hp',10)">+10</button>
+        <button onclick="addStat('hp',100)">+100</button>
+        <button onclick="addStat('hp',1000)">+1000</button>
+        <button onclick="addStatMax('hp')">最大</button>
+      </div>
+
+      <div class="item">
+        <b>攻撃強化</b>
+        <div id="atkPointInfo"></div>
+        <button onclick="addStat('atk',1)">+1</button>
+        <button onclick="addStat('atk',10)">+10</button>
+        <button onclick="addStat('atk',100)">+100</button>
+        <button onclick="addStat('atk',1000)">+1000</button>
+        <button onclick="addStatMax('atk')">最大</button>
+      </div>
+
+      <div class="item">
+        <b>防御強化</b>
+        <div id="defPointInfo"></div>
+        <button onclick="addStat('def',1)">+1</button>
+        <button onclick="addStat('def',10)">+10</button>
+        <button onclick="addStat('def',100)">+100</button>
+        <button onclick="addStat('def',1000)">+1000</button>
+        <button onclick="addStatMax('def')">最大</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="big">ゴールド強化</div>
+
+      <div class="item">
+        <b>攻撃倍率</b>
+        <div>
+          Lv<span id="goldAtkLv"></span>
+          / 現在 +<span id="goldAtkBonus"></span>%
+        </div>
+        <div>
+          次必要：
+          <span id="goldAtkCost"></span>G
+        </div>
+        <button onclick="goldUpgrade('atk',1)">+1</button>
+        <button onclick="goldUpgrade('atk',10)">+10</button>
+        <button onclick="goldUpgrade('atk',100)">+100</button>
+        <button onclick="goldUpgrade('atk',1000)">+1000</button>
+        <button onclick="goldUpgradeMax('atk')">最大</button>
+      </div>
+
+      <div class="item">
+        <b>防御倍率</b>
+        <div>
+          Lv<span id="goldDefLv"></span>
+          / 現在 +<span id="goldDefBonus"></span>%
+        </div>
+        <div>
+          次必要：
+          <span id="goldDefCost"></span>G
+        </div>
+        <button onclick="goldUpgrade('def',1)">+1</button>
+        <button onclick="goldUpgrade('def',10)">+10</button>
+        <button onclick="goldUpgrade('def',100)">+100</button>
+        <button onclick="goldUpgrade('def',1000)">+1000</button>
+        <button onclick="goldUpgradeMax('def')">最大</button>
+      </div>
     </div>
   </div>
 
   <div id="gachaTab" class="hidden">
     <div class="panel">
-      <div class="big">ガチャ</div>
+      <div class="big">装備ガチャ</div>
 
       <div>
         ガチャLv：
@@ -121,57 +192,26 @@
         <span id="dungeonKey"></span>
       </div>
 
-      <button onclick="changeDungeon('normal')">
-        通常階層
-      </button>
+      <button onclick="changeDungeon('normal')">通常階層</button>
+      <button onclick="changeDungeon('gold')">ゴールドD</button>
+      <button onclick="changeDungeon('upgrade')">強化素材D</button>
+      <button onclick="changeDungeon('awake')">覚醒素材D</button>
+      <button onclick="changeDungeon('gacha')">ガチャD</button>
 
-      <button onclick="changeDungeon('gold')">
-        ゴールドD
-      </button>
-
-      <button onclick="changeDungeon('upgrade')">
-        強化素材D
-      </button>
-
-      <button onclick="changeDungeon('awake')">
-        覚醒素材D
-      </button>
-
-      <button onclick="changeDungeon('gacha')">
-        ガチャD
-      </button>
+      <div class="log">
+        特化ダンジョンは鍵を1個消費。通常ボス撃破で鍵入手。
+      </div>
     </div>
   </div>
 
 </div>
 
 <div class="tabbar">
-
-  <div class="tab active"
-    onclick="showTab('battleTab',this)">
-    戦闘
-  </div>
-
-  <div class="tab"
-    onclick="showTab('equipTab',this)">
-    装備
-  </div>
-
-  <div class="tab"
-    onclick="showTab('playerTab',this)">
-    強化
-  </div>
-
-  <div class="tab"
-    onclick="showTab('gachaTab',this)">
-    ガチャ
-  </div>
-
-  <div class="tab"
-    onclick="showTab('dungeonTab',this)">
-    D
-  </div>
-
+  <div class="tab active" onclick="showTab('battleTab',this)">戦闘</div>
+  <div class="tab" onclick="showTab('equipTab',this)">装備</div>
+  <div class="tab" onclick="showTab('playerTab',this)">強化</div>
+  <div class="tab" onclick="showTab('gachaTab',this)">ガチャ</div>
+  <div class="tab" onclick="showTab('dungeonTab',this)">D</div>
 </div>
 
 <script src="data.js"></script>
