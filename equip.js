@@ -1,200 +1,144 @@
 function upgradeLimit(e){
-  return 10+e.awake*10;
+  return 10 + e.awake * 10;
 }
 
 function finalEquipPower(e,type){
 
   return Math.floor(
-    (e[type]||0)*
-    (1+e.upgrade*0.1)*
-    (1+e.awake*0.2)
+    (e[type] || 0) *
+    (1 + e.upgrade * 0.1) *
+    (1 + e.awake * 0.2)
   );
 }
 
 function equipScore(e){
 
   return (
-    finalEquipPower(e,"atk")+
-    finalEquipPower(e,"def")+
-    finalEquipPower(e,"hp")/5
+    finalEquipPower(e,"atk") +
+    finalEquipPower(e,"def") +
+    finalEquipPower(e,"hp") / 5
   );
 }
 
-function upgradeGoldCost(e){
+function optionValue(e,key){
 
-  return Math.floor(
-    (80+rarityIndex(e.rarity)*25)*
-    Math.pow(1.18,e.upgrade)
-  );
+  let total=0;
+
+  [
+    e.option1,
+    e.option2,
+    e.option3
+  ].forEach(op=>{
+
+    if(op.includes(key)){
+      total += getPercent(op);
+    }
+  });
+
+  return total;
 }
 
-function upgradeStoneCost(e){
+function sortedEquipments(){
 
-  return (
-    1+
-    Math.floor(e.upgrade/5)+
-    rarityIndex(e.rarity)
-  );
+  let arr=
+    player.equipments
+    .map((e,i)=>({e,i}));
+
+  if(equipFilter!=="all"){
+
+    arr=arr.filter(v=>
+      v.e.slot===equipFilter
+    );
+  }
+
+  arr.sort((a,b)=>{
+
+    let ea=a.e;
+    let eb=b.e;
+
+    if(sortType==="rarity"){
+      return rarityIndex(eb.rarity)
+      - rarityIndex(ea.rarity);
+    }
+
+    if(sortType==="power"){
+      return equipScore(eb)
+      - equipScore(ea);
+    }
+
+    if(sortType==="upgrade"){
+      return eb.upgrade-ea.upgrade;
+    }
+
+    if(sortType==="awake"){
+      return eb.awake-ea.awake;
+    }
+
+    if(sortType==="exp"){
+      return optionValue(eb,"経験値")
+      - optionValue(ea,"経験値");
+    }
+
+    if(sortType==="gold"){
+      return optionValue(eb,"ゴールド")
+      - optionValue(ea,"ゴールド");
+    }
+
+    if(sortType==="gacha"){
+      return optionValue(eb,"ガチャ")
+      - optionValue(ea,"ガチャ");
+    }
+
+    if(sortType==="upgradeMat"){
+      return optionValue(eb,"強化素材")
+      - optionValue(ea,"強化素材");
+    }
+
+    if(sortType==="awakeMat"){
+      return optionValue(eb,"覚醒素材")
+      - optionValue(ea,"覚醒素材");
+    }
+
+    if(sortType==="speed"){
+      return optionValue(eb,"ゲーム速度")
+      - optionValue(ea,"ゲーム速度");
+    }
+
+    if(sortType==="multi"){
+      return optionValue(eb,"連撃率")
+      - optionValue(ea,"連撃率");
+    }
+
+    if(sortType==="skip"){
+      return optionValue(eb,"階層スキップ")
+      - optionValue(ea,"階層スキップ");
+    }
+
+    return eb.id-ea.id;
+  });
+
+  return arr;
 }
 
-function awakeStoneCost(e){
+function isEquipped(index){
 
-  return Math.floor(
-    (5+rarityIndex(e.rarity)*4)*
-    Math.pow(e.awake+1,2)
-  );
+  return Object.values(
+    player.equipped
+  ).includes(index);
 }
 
-function createEquipment(){
+function setEquipFilter(v){
 
-  let rarity=rollRarity();
+  equipFilter=v;
 
-  let i=rarityIndex(rarity);
-
-  let slot=
-    slots[
-      randomInt(0,slots.length-1)
-    ][0];
-
-  let baseMin=1+i*8;
-  let baseMax=baseMin+7+i*3;
-
-  let base=randomInt(baseMin,baseMax);
-
-  let floorBonus=Math.pow(
-    1.08,
-    player.floor
-  );
-
-  let rand=randomInt(85,115)/100;
-
-  let e={
-    id:Date.now()+Math.random(),
-
-    slot,
-    name:equipName(slot),
-
-    rarity,
-
-    quality:Math.floor(rand*100),
-
-    upgrade:0,
-    awake:0,
-
-    atk:0,
-    def:0,
-    hp:0,
-
-    option1:randomOption(rarity,slot),
-    option2:randomOption(rarity,slot),
-    option3:randomOption(rarity,slot)
-  };
-
-  let value=Math.floor(
-    base*
-    floorBonus*
-    rand
-  );
-
-  if(slot==="weapon"){
-    e.atk=value*3;
-  }
-
-  else if(
-    [
-      "head",
-      "armor",
-      "pants",
-      "gloves"
-    ].includes(slot)
-  ){
-    e.def=value*2;
-    e.hp=value*5;
-  }
-
-  else if(
-    [
-      "shoes",
-      "wing"
-    ].includes(slot)
-  ){
-    e.def=value;
-    e.hp=value*3;
-  }
-
-  else if(
-    [
-      "necklace",
-      "bracelet",
-      "pet"
-    ].includes(slot)
-  ){
-    e.atk=value;
-    e.hp=value*2;
-  }
-
-  return e;
+  renderEquipList();
 }
 
-function randomOption(rarity,slot){
+function setAutoSell(v){
 
-  let common=[
-    "HP増加",
-    "攻撃力増加",
-    "防御力増加",
-    "獲得経験値増加",
-    "獲得ゴールド増加",
-    "獲得ガチャアイテム増加",
-    "獲得装備強化素材増加",
-    "獲得装備覚醒素材増加"
-  ];
+  player.autoSellRank=v;
 
-  let special=[
-    "ゲーム速度上昇",
-    "連撃率上昇",
-    "階層スキップ数"
-  ];
-
-  let list=common.concat(special);
-
-  if(slot==="shoes"){
-    list=list.concat([
-      "ゲーム速度上昇",
-      "ゲーム速度上昇"
-    ]);
-  }
-
-  if(slot==="wing"){
-    list=list.concat([
-      "階層スキップ数",
-      "階層スキップ数"
-    ]);
-  }
-
-  if(slot==="bracelet"){
-    list=list.concat([
-      "連撃率上昇",
-      "連撃率上昇"
-    ]);
-  }
-
-  let i=rarityIndex(rarity);
-
-  let min=1+i*5;
-
-  let max=Math.min(
-    100,
-    min+4+i*2
-  );
-
-  return (
-    list[
-      randomInt(0,list.length-1)
-    ]+
-    " +"+
-    randomInt(min,max)+
-    "%"
-  );
+  saveGame();
 }
 
 function equipItem(index){
@@ -204,12 +148,151 @@ function equipItem(index){
   player.equipped[e.slot]=index;
 
   showEffect(
-    slotName(e.slot)+"装備変更"
+    slotName(e.slot)+"装備"
   );
 
   saveGame();
+
   drawCommon();
   renderEquipList();
+}
+
+function sellGain(e){
+
+  let r=rarityIndex(e.rarity);
+
+  return {
+    up:
+      1 +
+      r*3 +
+      e.upgrade,
+
+    aw:
+      Math.floor(r/2) +
+      e.awake
+  };
+}
+
+function sellEquip(index){
+
+  if(!player.equipments[index]){
+    return;
+  }
+
+  let e=player.equipments[index];
+
+  let gain=sellGain(e);
+
+  player.upgradeStone += gain.up;
+  player.awakeStone += gain.aw;
+
+  for(let k in player.equipped){
+
+    if(player.equipped[k]===index){
+      player.equipped[k]=null;
+    }
+
+    else if(player.equipped[k]>index){
+      player.equipped[k]--;
+    }
+  }
+
+  player.equipments.splice(index,1);
+
+  showEffect(
+    "売却：強化+"+
+    gain.up+
+    " 覚醒+"+
+    gain.aw
+  );
+
+  saveGame();
+
+  drawCommon();
+  renderEquipList();
+}
+
+function sellAll(rarity){
+
+  let target=
+    rarityIndex(rarity);
+
+  let keep=[];
+
+  let gainUp=0;
+  let gainAw=0;
+  let sold=0;
+
+  player.equipments.forEach((e)=>{
+
+    let equipped=
+      Object.values(
+        player.equipped
+      ).includes(
+        player.equipments.indexOf(e)
+      );
+
+    if(
+      !equipped &&
+      rarityIndex(e.rarity)<=target
+    ){
+
+      let g=sellGain(e);
+
+      gainUp+=g.up;
+      gainAw+=g.aw;
+
+      sold++;
+    }
+
+    else{
+      keep.push(e);
+    }
+  });
+
+  player.equipments=keep;
+
+  for(let k in player.equipped){
+    player.equipped[k]=null;
+  }
+
+  player.upgradeStone+=gainUp;
+  player.awakeStone+=gainAw;
+
+  showEffect(
+    sold+
+    "個売却"
+  );
+
+  saveGame();
+
+  drawCommon();
+  renderEquipList();
+}
+
+function upgradeGoldCost(e){
+
+  return Math.floor(
+    (80 + rarityIndex(e.rarity)*25) *
+    Math.pow(1.18,e.upgrade)
+  );
+}
+
+function upgradeStoneCost(e){
+
+  return (
+    1 +
+    Math.floor(e.upgrade/5) +
+    rarityIndex(e.rarity)
+  );
+}
+
+function awakeStoneCost(e){
+
+  return Math.floor(
+    (5 + rarityIndex(e.rarity)*4) *
+    Math.pow(e.awake+1,2)
+  );
 }
 
 function upgradeItem(index,times){
@@ -233,7 +316,7 @@ function upgradeItem(index,times){
       upgradeStoneCost(e);
 
     if(
-      player.gold<gold||
+      player.gold<gold ||
       player.upgradeStone<stone
     ){
       break;
@@ -247,24 +330,13 @@ function upgradeItem(index,times){
     done++;
   }
 
-  if(done===0){
-
-    if(
-      e.upgrade>=upgradeLimit(e)
-    ){
-      showEffect("強化上限");
-    }
-
-    else{
-      showEffect("素材不足");
-    }
-  }
-
-  else{
-    showEffect(
-      "強化+"+done
-    );
-  }
+  showEffect(
+    done>0
+    ?
+    "強化+"+done
+    :
+    "素材不足"
+  );
 
   saveGame();
 
@@ -274,4 +346,30 @@ function upgradeItem(index,times){
 
 function upgradeMax(index){
   upgradeItem(index,999999);
+}
+
+function awakeItem(index){
+
+  let e=player.equipments[index];
+
+  let cost=
+    awakeStoneCost(e);
+
+  if(player.awakeStone<cost){
+    showEffect("覚醒素材不足");
+    return;
+  }
+
+  player.awakeStone-=cost;
+
+  e.awake++;
+
+  showEffect(
+    "覚醒+"+e.awake
+  );
+
+  saveGame();
+
+  drawCommon();
+  renderEquipList();
 }
