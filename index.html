@@ -1,0 +1,1635 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>階層突破ハクスラRPG</title>
+
+<style>
+body{
+margin:0;
+background:#101014;
+color:white;
+font-family:sans-serif;
+}
+
+#game{
+max-width:560px;
+margin:auto;
+padding-bottom:100px;
+}
+
+.panel{
+background:#20202a;
+margin:10px;
+padding:12px;
+border-radius:12px;
+}
+
+.big{
+font-size:24px;
+font-weight:bold;
+}
+
+.hpbar{
+height:20px;
+background:#444;
+border-radius:10px;
+overflow:hidden;
+margin:5px 0;
+}
+
+.hpfill{
+height:100%;
+background:#e53935;
+width:100%;
+}
+
+button,select{
+border:none;
+border-radius:8px;
+padding:8px;
+margin:4px;
+background:#444;
+color:white;
+}
+
+.item{
+background:#30303a;
+margin:8px 0;
+padding:8px;
+border-radius:10px;
+font-size:14px;
+}
+
+.equipped{
+border:2px solid gold;
+}
+
+.tabbar{
+position:fixed;
+bottom:0;
+left:0;
+width:100%;
+display:flex;
+background:#181818;
+}
+
+.tab{
+flex:1;
+text-align:center;
+padding:12px 0;
+font-size:12px;
+}
+
+.active{
+background:#333;
+}
+
+.hidden{
+display:none;
+}
+
+.statLine{
+display:flex;
+justify-content:space-between;
+border-bottom:1px solid #333;
+padding:4px 0;
+}
+
+.effect{
+position:fixed;
+top:80px;
+left:50%;
+transform:translateX(-50%);
+background:#008f5a;
+padding:10px 20px;
+border-radius:10px;
+animation:fade 1s forwards;
+z-index:999;
+}
+
+@keyframes fade{
+0%{opacity:1;}
+100%{
+opacity:0;
+top:40px;
+}
+}
+</style>
+</head>
+
+<body>
+
+<div id="game">
+
+<div id="battleTab">
+
+<div class="panel">
+
+<div class="big">
+<span id="dungeonName"></span>
+<span id="floor"></span>
+</div>
+
+<div>
+敵：
+<span id="enemyName"></span>
+</div>
+
+<div>
+敵攻撃：
+<span id="enemyAtk"></span>
+</div>
+
+<div class="hpbar">
+<div id="enemyHpFill" class="hpfill"></div>
+</div>
+
+<div id="enemyHpText"></div>
+
+<div id="battleLog"></div>
+
+</div>
+
+<div class="panel">
+
+<div class="big">ステータス</div>
+
+<div id="statusList"></div>
+
+</div>
+
+</div>
+
+<div id="equipTab" class="hidden">
+
+<div class="panel">
+
+<div class="big">装備</div>
+
+<select onchange="sortType=this.value;draw();">
+
+<option value="new">新着順</option>
+<option value="rarity">レア順</option>
+<option value="power">戦力順</option>
+<option value="upgrade">強化順</option>
+<option value="awake">覚醒順</option>
+
+</select>
+
+<br>
+
+<button onclick="sellAll('N')">
+N以下売却
+</button>
+
+<button onclick="sellAll('R')">
+R以下売却
+</button>
+
+<button onclick="sellAll('HR')">
+HR以下売却
+</button>
+
+<button onclick="sellAll('SR')">
+SR以下売却
+</button>
+
+<div id="equipList"></div>
+
+</div>
+
+</div>
+
+<div id="playerTab" class="hidden">
+
+<div class="panel">
+
+<div class="big">
+ステータスポイント強化
+</div>
+
+<div>
+ポイント：
+<span id="point"></span>
+</div>
+
+<button onclick="addStat('hp')">
+HP強化
+</button>
+
+<button onclick="addStat('atk')">
+攻撃強化
+</button>
+
+<button onclick="addStat('def')">
+防御強化
+</button>
+
+</div>
+
+</div>
+
+<div id="gachaTab" class="hidden">
+
+<div class="panel">
+
+<div class="big">
+装備ガチャ
+</div>
+
+<div>
+ガチャLv：
+<span id="gachaLv"></span>
+</div>
+
+<div>
+ガチャアイテム：
+<span id="gachaStone"></span>
+</div>
+
+<button onclick="gacha(1)">
+1回
+</button>
+
+<button onclick="gacha(10)">
+10回
+</button>
+
+<button onclick="gacha(100)">
+100回
+</button>
+
+<div id="gachaResult"></div>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="tabbar">
+
+<div class="tab active"
+onclick="showTab('battleTab',this)">
+戦闘
+</div>
+
+<div class="tab"
+onclick="showTab('equipTab',this)">
+装備
+</div>
+
+<div class="tab"
+onclick="showTab('playerTab',this)">
+強化
+</div>
+
+<div class="tab"
+onclick="showTab('gachaTab',this)">
+ガチャ
+</div>
+
+</div>
+
+<script>
+
+let save =
+JSON.parse(
+localStorage.getItem(
+"hackslashComplete"
+)
+);
+
+let player =
+save || {
+
+floor:1,
+level:1,
+exp:0,
+
+gold:0,
+
+gachaStone:50,
+
+upgradeStone:0,
+
+awakeStone:0,
+
+point:0,
+
+baseHp:100,
+baseAtk:10,
+baseDef:5,
+
+hp:100,
+
+equipments:[],
+
+equipped:{
+weapon:null,
+head:null,
+armor:null,
+pants:null,
+shoes:null,
+gloves:null,
+wing:null,
+necklace:null,
+bracelet:null,
+pet:null
+},
+
+atkCount:0,
+defCount:0,
+hpCount:0
+
+};
+
+let enemy = {};
+
+let sortType = "new";
+
+const slots = [
+
+["weapon","武器"],
+["head","頭"],
+["armor","鎧"],
+["pants","ズボン"],
+["shoes","靴"],
+["gloves","手袋"],
+["wing","羽"],
+["necklace","ネックレス"],
+["bracelet","腕輪"],
+["pet","ペット"]
+
+];
+
+const rarityOrder = [
+"N","R","HR","SR",
+"SSR","UR","LR",
+"MR","GR","EX"
+];
+
+const rarityColors = {
+
+N:"#aaa",
+R:"#4caf50",
+HR:"#03a9f4",
+SR:"#9c27b0",
+SSR:"#ffd700",
+UR:"#ff4444",
+LR:"#ff00ff",
+MR:"#ff8800",
+GR:"#fff",
+EX:"#00ffff"
+
+};
+
+function rarityIndex(r){
+
+return rarityOrder.indexOf(r);
+
+}
+
+function equipName(slot){
+
+return {
+
+weapon:"剣",
+head:"兜",
+armor:"鎧",
+pants:"ズボン",
+shoes:"靴",
+gloves:"手袋",
+wing:"羽",
+necklace:"ネックレス",
+bracelet:"腕輪",
+pet:"ペット"
+
+}[slot];
+
+}
+
+function slotName(slot){
+
+return slots.find(
+s=>s[0]===slot
+)[1];
+
+}
+
+function createEnemy(){
+
+enemy = {
+
+name:
+player.floor % 5 === 0
+?
+"階層ボス"
+:
+enemyName(),
+
+maxHp:
+Math.floor(
+50 * Math.pow(
+1.12,
+player.floor
+)
+),
+
+hp:0,
+
+atk:
+Math.floor(
+5 * Math.pow(
+1.1,
+player.floor
+)
+)
+
+};
+
+enemy.hp =
+enemy.maxHp;
+
+draw();
+
+}
+
+function enemyName(){
+
+const list = [
+"スライム",
+"ゴブリン",
+"ウルフ",
+"ドラゴン"
+];
+
+return list[
+player.floor %
+list.length
+];
+
+}
+
+function finalEquipPower(e,type){
+
+return Math.floor(
+
+(e[type] || 0)
+
+*
+
+(1 + e.upgrade * 0.1)
+
+*
+
+(1 + e.awake * 0.2)
+
+);
+
+}
+
+function calcStats(){
+
+let atk =
+player.baseAtk;
+
+let def =
+player.baseDef;
+
+let maxHp =
+player.baseHp;
+
+for(const [slot] of slots){
+
+let idx =
+player.equipped[slot];
+
+if(
+idx !== null &&
+player.equipments[idx]
+){
+
+let e =
+player.equipments[idx];
+
+atk +=
+finalEquipPower(
+e,
+"atk"
+);
+
+def +=
+finalEquipPower(
+e,
+"def"
+);
+
+maxHp +=
+finalEquipPower(
+e,
+"hp"
+);
+
+}
+
+}
+
+player.atk =
+Math.floor(atk);
+
+player.def =
+Math.floor(def);
+
+player.maxHp =
+Math.floor(maxHp);
+
+if(
+player.hp >
+player.maxHp
+){
+
+player.hp =
+player.maxHp;
+
+}
+
+}
+
+function attack(){
+
+calcStats();
+
+let dmg =
+Math.max(
+1,
+player.atk -
+Math.floor(
+player.floor / 2
+)
+);
+
+enemy.hp -= dmg;
+
+if(enemy.hp < 0){
+enemy.hp = 0;
+}
+
+document.getElementById(
+"battleLog"
+).innerHTML =
+"与ダメージ：" +
+dmg;
+
+if(enemy.hp <= 0){
+
+winBattle();
+
+}else{
+
+enemyAttack();
+
+}
+
+draw();
+
+}
+
+function enemyAttack(){
+
+let dmg =
+Math.max(
+1,
+enemy.atk -
+player.def
+);
+
+player.hp -= dmg;
+
+if(player.hp < 0){
+
+player.hp = 0;
+
+}
+
+document.getElementById(
+"battleLog"
+).innerHTML +=
+"<br>被ダメージ：" +
+dmg;
+
+if(player.hp <= 0){
+
+player.floor =
+Math.max(
+1,
+player.floor - 1
+);
+
+player.hp =
+player.maxHp;
+
+showEffect("敗北");
+
+createEnemy();
+
+}
+
+}
+
+function winBattle(){
+
+let gold =
+Math.floor(
+20 *
+Math.pow(
+1.13,
+player.floor
+)
+);
+
+let exp =
+Math.floor(
+10 *
+Math.pow(
+1.12,
+player.floor
+)
+);
+
+player.gold += gold;
+player.exp += exp;
+
+player.gachaStone +=
+Math.floor(
+1 *
+Math.pow(
+1.03,
+player.floor
+)
+);
+
+player.upgradeStone +=
+Math.floor(
+1 *
+Math.pow(
+1.02,
+player.floor
+)
+);
+
+if(
+player.floor % 5 === 0
+){
+
+player.awakeStone +=
+Math.floor(
+2 *
+Math.pow(
+1.02,
+player.floor
+)
+);
+
+}
+
+while(
+player.exp >=
+needExp()
+){
+
+player.exp -=
+needExp();
+
+player.level++;
+
+player.point += 5;
+
+player.baseHp += 20;
+
+showEffect(
+"レベルアップ"
+);
+
+}
+
+player.floor++;
+
+createEnemy();
+
+saveGame();
+
+}
+
+function needExp(){
+
+return Math.floor(
+50 *
+Math.pow(
+1.18,
+player.level
+)
+);
+
+}
+
+function addStat(type){
+
+if(
+player.point <= 0
+){
+
+showEffect(
+"ポイント不足"
+);
+
+return;
+
+}
+
+player.point--;
+
+if(type === "atk"){
+
+let add =
+5 *
+Math.pow(
+2,
+Math.floor(
+player.atkCount / 100
+)
+);
+
+player.baseAtk += add;
+
+player.atkCount++;
+
+showEffect(
+"攻撃+" + add
+);
+
+}
+
+if(type === "def"){
+
+let add =
+3 *
+Math.pow(
+2,
+Math.floor(
+player.defCount / 100
+)
+);
+
+player.baseDef += add;
+
+player.defCount++;
+
+showEffect(
+"防御+" + add
+);
+
+}
+
+if(type === "hp"){
+
+let add =
+20 *
+Math.pow(
+2,
+Math.floor(
+player.hpCount / 100
+)
+);
+
+player.baseHp += add;
+
+player.hp += add;
+
+player.hpCount++;
+
+showEffect(
+"HP+" + add
+);
+
+}
+
+saveGame();
+
+draw();
+
+}
+
+function createEquipment(){
+
+let rarity =
+rarityOrder[
+randomInt(
+0,
+Math.min(
+rarityOrder.length - 1,
+Math.floor(
+player.floor / 10
+)
+)
+)
+];
+
+let slot =
+slots[
+randomInt(
+0,
+slots.length - 1
+)
+][0];
+
+let value =
+Math.floor(
+randomInt(1,10) *
+Math.pow(
+1.08,
+player.floor
+)
+);
+
+let e = {
+
+slot,
+name:equipName(slot),
+rarity,
+
+atk:0,
+def:0,
+hp:0,
+
+upgrade:0,
+awake:0
+
+};
+
+if(slot === "weapon"){
+
+e.atk =
+value * 3;
+
+}
+
+else if(
+["head","armor","pants","gloves"]
+.includes(slot)
+){
+
+e.def =
+value * 2;
+
+e.hp =
+value * 5;
+
+}
+
+else{
+
+e.hp =
+value * 3;
+
+e.def =
+value;
+
+}
+
+return e;
+
+}
+
+function gacha(count){
+
+let result = [];
+
+for(let i=0;i<count;i++){
+
+if(
+player.gachaStone <= 0
+)break;
+
+player.gachaStone--;
+
+let e =
+createEquipment();
+
+player.equipments.push(e);
+
+result.push(
+e.rarity +
+" " +
+slotName(e.slot)
+);
+
+}
+
+document.getElementById(
+"gachaResult"
+).innerHTML =
+result.join("<br>");
+
+saveGame();
+
+draw();
+
+}
+
+function equipItem(index){
+
+let e =
+player.equipments[index];
+
+player.equipped[
+e.slot
+] = index;
+
+showEffect(
+slotName(e.slot) +
+"装備"
+);
+
+saveGame();
+
+draw();
+
+}
+
+function upgradeLimit(e){
+
+return 10 +
+e.awake * 10;
+
+}
+
+function upgradeItem(index,count){
+
+let e =
+player.equipments[index];
+
+let done = 0;
+
+for(let i=0;i<count;i++){
+
+if(
+e.upgrade >=
+upgradeLimit(e)
+)break;
+
+let goldCost =
+Math.floor(
+(100 +
+rarityIndex(e.rarity) * 20)
+*
+Math.pow(
+1.18,
+e.upgrade
+)
+);
+
+let stoneCost =
+1 +
+Math.floor(
+e.upgrade / 5
+);
+
+if(
+player.gold < goldCost ||
+player.upgradeStone < stoneCost
+)break;
+
+player.gold -= goldCost;
+
+player.upgradeStone -=
+stoneCost;
+
+e.upgrade++;
+
+done++;
+
+}
+
+showEffect(
+"強化+" + done
+);
+
+saveGame();
+
+draw();
+
+}
+
+function upgradeMax(index){
+
+upgradeItem(
+index,
+999999
+);
+
+}
+
+function awakenItem(index){
+
+let e =
+player.equipments[index];
+
+let same =
+player.equipments.findIndex(
+(x,i)=>
+
+i !== index &&
+
+x.slot === e.slot &&
+
+x.rarity === e.rarity
+);
+
+if(
+same === -1
+){
+
+showEffect(
+"同装備不足"
+);
+
+return;
+
+}
+
+let cost =
+Math.floor(
+
+(5 +
+rarityIndex(e.rarity) * 5)
+
+*
+
+Math.pow(
+e.awake + 1,
+2
+)
+
+);
+
+if(
+player.awakeStone < cost
+){
+
+showEffect(
+"覚醒素材不足"
+);
+
+return;
+
+}
+
+player.awakeStone -= cost;
+
+e.awake++;
+
+removeEquipment(same);
+
+showEffect(
+"覚醒成功"
+);
+
+saveGame();
+
+draw();
+
+}
+
+function removeEquipment(index){
+
+player.equipments.splice(
+index,
+1
+);
+
+for(const [slot] of slots){
+
+let idx =
+player.equipped[slot];
+
+if(idx === index){
+
+player.equipped[slot] =
+null;
+
+}
+
+else if(
+idx !== null &&
+idx > index
+){
+
+player.equipped[slot]--;
+
+}
+
+}
+
+}
+
+function isEquipped(index){
+
+return Object.values(
+player.equipped
+).includes(index);
+
+}
+
+function sellEquip(index){
+
+if(
+isEquipped(index)
+){
+
+showEffect(
+"装備中"
+);
+
+return;
+
+}
+
+let e =
+player.equipments[index];
+
+let r =
+rarityIndex(
+e.rarity
+);
+
+player.upgradeStone +=
+1 + r * 3;
+
+player.awakeStone +=
+Math.floor(r / 2);
+
+removeEquipment(index);
+
+showEffect("売却");
+
+saveGame();
+
+draw();
+
+}
+
+function sellAll(rank){
+
+let max =
+rarityIndex(rank);
+
+for(
+let i=
+player.equipments.length - 1;
+i>=0;
+i--
+){
+
+if(
+isEquipped(i)
+)continue;
+
+let e =
+player.equipments[i];
+
+if(
+rarityIndex(e.rarity)
+<= max
+){
+
+sellEquip(i);
+
+}
+
+}
+
+draw();
+
+}
+
+function sortedEquipments(){
+
+let arr =
+player.equipments.map(
+(e,i)=>({e,i})
+);
+
+if(sortType === "rarity"){
+
+arr.sort((a,b)=>
+
+rarityIndex(
+b.e.rarity
+)
+
+-
+
+rarityIndex(
+a.e.rarity
+)
+
+);
+
+}
+
+if(sortType === "power"){
+
+arr.sort((a,b)=>
+
+(
+
+finalEquipPower(
+b.e,
+"atk"
+)
+
++
+
+finalEquipPower(
+b.e,
+"def"
+)
+
++
+
+finalEquipPower(
+b.e,
+"hp"
+)
+
+)
+
+-
+
+(
+
+finalEquipPower(
+a.e,
+"atk"
+)
+
++
+
+finalEquipPower(
+a.e,
+"def"
+)
+
++
+
+finalEquipPower(
+a.e,
+"hp"
+)
+
+)
+
+);
+
+}
+
+if(sortType === "upgrade"){
+
+arr.sort((a,b)=>
+
+b.e.upgrade -
+a.e.upgrade
+
+);
+
+}
+
+if(sortType === "awake"){
+
+arr.sort((a,b)=>
+
+b.e.awake -
+a.e.awake
+
+);
+
+}
+
+return arr.reverse();
+
+}
+
+function draw(){
+
+calcStats();
+
+document.getElementById(
+"dungeonName"
+).innerHTML =
+"通常";
+
+document.getElementById(
+"floor"
+).innerHTML =
+player.floor + "F";
+
+document.getElementById(
+"enemyName"
+).innerHTML =
+enemy.name;
+
+document.getElementById(
+"enemyAtk"
+).innerHTML =
+enemy.atk;
+
+document.getElementById(
+"enemyHpText"
+).innerHTML =
+enemy.hp +
+" / " +
+enemy.maxHp;
+
+document.getElementById(
+"enemyHpFill"
+).style.width =
+(enemy.hp / enemy.maxHp * 100)
++
+"%";
+
+document.getElementById(
+"statusList"
+).innerHTML =
+
+`
+
+<div class="statLine">
+<span>Lv</span>
+<span>${player.level}</span>
+</div>
+
+<div class="statLine">
+<span>HP</span>
+<span>
+${Math.floor(player.hp)}
+/
+${player.maxHp}
+</span>
+</div>
+
+<div class="statLine">
+<span>攻撃</span>
+<span>${player.atk}</span>
+</div>
+
+<div class="statLine">
+<span>防御</span>
+<span>${player.def}</span>
+</div>
+
+<div class="statLine">
+<span>EXP</span>
+<span>
+${Math.floor(player.exp)}
+/
+${needExp()}
+</span>
+</div>
+
+<div class="statLine">
+<span>ゴールド</span>
+<span>${Math.floor(player.gold)}</span>
+</div>
+
+<div class="statLine">
+<span>ガチャ</span>
+<span>${player.gachaStone}</span>
+</div>
+
+<div class="statLine">
+<span>強化素材</span>
+<span>${player.upgradeStone}</span>
+</div>
+
+<div class="statLine">
+<span>覚醒素材</span>
+<span>${player.awakeStone}</span>
+</div>
+
+`;
+
+document.getElementById(
+"point"
+).innerHTML =
+player.point;
+
+document.getElementById(
+"gachaLv"
+).innerHTML =
+player.level;
+
+document.getElementById(
+"gachaStone"
+).innerHTML =
+player.gachaStone;
+
+let html = "";
+
+sortedEquipments()
+.forEach(({e,i})=>{
+
+let eq =
+isEquipped(i);
+
+html +=
+
+`
+
+<div class="item
+${eq ? "equipped" : ""}
+">
+
+${eq ? "【装備中】" : ""}
+
+<span style="
+color:
+${rarityColors[e.rarity]}
+">
+
+${e.rarity}
+
+</span>
+
+${slotName(e.slot)}
+
+${e.name}
+
+<br>
+
+攻撃 +
+${finalEquipPower(e,"atk")}
+
+防御 +
+${finalEquipPower(e,"def")}
+
+HP +
+${finalEquipPower(e,"hp")}
+
+<br>
+
+強化
++
+${e.upgrade}
+/${upgradeLimit(e)}
+
+覚醒
++
+${e.awake}
+
+<br>
+
+<button
+onclick="equipItem(${i})"
+>
+
+装備
+
+</button>
+
+<button
+onclick="upgradeItem(${i},1)"
+>
+
++1
+
+</button>
+
+<button
+onclick="upgradeItem(${i},10)"
+>
+
++10
+
+</button>
+
+<button
+onclick="upgradeItem(${i},100)"
+>
+
++100
+
+</button>
+
+<button
+onclick="upgradeMax(${i})"
+>
+
+最大
+
+</button>
+
+<button
+onclick="awakenItem(${i})"
+>
+
+覚醒
+
+</button>
+
+<button
+onclick="sellEquip(${i})"
+>
+
+売却
+
+</button>
+
+</div>
+
+`;
+
+});
+
+document.getElementById(
+"equipList"
+).innerHTML =
+html;
+
+}
+
+function showTab(id,btn){
+
+document.querySelectorAll(
+"#battleTab,#equipTab,#playerTab,#gachaTab"
+).forEach(e=>
+e.classList.add("hidden")
+);
+
+document.getElementById(id)
+.classList.remove("hidden");
+
+document.querySelectorAll(".tab")
+.forEach(e=>
+e.classList.remove("active")
+);
+
+btn.classList.add("active");
+
+}
+
+function saveGame(){
+
+localStorage.setItem(
+"hackslashComplete",
+JSON.stringify(player)
+);
+
+}
+
+function showEffect(text){
+
+let d =
+document.createElement("div");
+
+d.className = "effect";
+
+d.innerHTML = text;
+
+document.body.appendChild(d);
+
+setTimeout(()=>{
+
+d.remove();
+
+},1000);
+
+}
+
+function randomInt(min,max){
+
+return Math.floor(
+Math.random() *
+(max - min + 1)
+)
++
+min;
+
+}
+
+createEnemy();
+
+draw();
+
+setInterval(()=>{
+
+attack();
+
+},1000);
+
+</script>
+
+</body>
+</html>
