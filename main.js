@@ -80,6 +80,7 @@ function addStatMax(t){
 }
 
 function typeLabel(t){
+
   return (
     t==="atk"
     ?
