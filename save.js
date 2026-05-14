@@ -1,6 +1,7 @@
-const SAVE_KEY="hackRpgSplit_v1";
+const SAVE_KEY="RPG_SAVE_VER_1_0_0";
 
 function saveGame(){
+
   localStorage.setItem(
     SAVE_KEY,
     JSON.stringify(player)
@@ -8,7 +9,20 @@ function saveGame(){
 }
 
 function loadGame(){
-  return JSON.parse(
-    localStorage.getItem(SAVE_KEY)
-  );
+
+  const data=
+    localStorage.getItem(SAVE_KEY);
+
+  if(!data){
+    return null;
+  }
+
+  try{
+
+    return JSON.parse(data);
+
+  }catch{
+
+    return null;
+  }
 }
