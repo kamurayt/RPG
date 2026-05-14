@@ -1,59 +1,59 @@
-function statAddValue(t){
+function statAddValue(type){
 
-  let c=
-    t==="atk"
+  const count=
+    type==="atk"
     ?
     player.atkCount
     :
-    t==="def"
+    type==="def"
     ?
     player.defCount
     :
     player.hpCount;
 
-  let b=
-    t==="atk"
+  const base=
+    type==="atk"
     ?
     5
     :
-    t==="def"
+    type==="def"
     ?
     3
     :
     20;
 
-  return b*Math.pow(
+  return base*Math.pow(
     2,
-    Math.floor(c/100)
+    Math.floor(count/100)
   );
 }
 
-function addStat(t,n){
+function addStat(type,times){
 
   let done=0;
   let total=0;
 
-  for(let i=0;i<n;i++){
+  for(let i=0;i<times;i++){
 
     if(player.point<=0){
       break;
     }
 
-    let add=statAddValue(t);
+    const add=statAddValue(type);
 
     player.point--;
 
-    if(t==="atk"){
+    if(type==="atk"){
       player.baseAtk+=add;
       player.atkCount++;
     }
 
-    if(t==="def"){
+    if(type==="def"){
       player.baseDef+=add;
       player.defCount++;
     }
 
-    if(t==="hp"){
+    if(type==="hp"){
       player.baseHp+=add;
       player.hp+=add;
       player.hpCount++;
@@ -66,56 +66,41 @@ function addStat(t,n){
   showEffect(
     done>0
     ?
-    typeLabel(t)+"+"+total
+    "強化+"+total
     :
     "ポイント不足"
   );
 
   saveGame();
-  drawCommon();
+  drawAll();
 }
 
-function addStatMax(t){
-  addStat(t,player.point);
+function addStatMax(type){
+  addStat(type,player.point);
 }
 
-function typeLabel(t){
-
-  return (
-    t==="atk"
-    ?
-    "攻撃"
-    :
-    t==="def"
-    ?
-    "防御"
-    :
-    "HP"
-  );
-}
-
-function goldUpgrade(t,n){
+function goldUpgrade(type,times){
 
   let done=0;
 
-  for(let i=0;i<n;i++){
+  for(let i=0;i<times;i++){
 
-    let lv=
-      t==="atk"
+    const lv=
+      type==="atk"
       ?
       player.goldAtkLv
       :
       player.goldDefLv;
 
-    let c=goldCost(lv);
+    const cost=goldCost(lv);
 
-    if(player.gold<c){
+    if(player.gold<cost){
       break;
     }
 
-    player.gold-=c;
+    player.gold-=cost;
 
-    if(t==="atk"){
+    if(type==="atk"){
       player.goldAtkLv++;
     }
 
@@ -135,31 +120,31 @@ function goldUpgrade(t,n){
   );
 
   saveGame();
-  drawCommon();
+  drawAll();
 }
 
-function goldUpgradeMax(t){
+function goldUpgradeMax(type){
 
   let done=0;
 
   while(true){
 
-    let lv=
-      t==="atk"
+    const lv=
+      type==="atk"
       ?
       player.goldAtkLv
       :
       player.goldDefLv;
 
-    let c=goldCost(lv);
+    const cost=goldCost(lv);
 
-    if(player.gold<c){
+    if(player.gold<cost){
       break;
     }
 
-    player.gold-=c;
+    player.gold-=cost;
 
-    if(t==="atk"){
+    if(type==="atk"){
       player.goldAtkLv++;
     }
 
@@ -183,21 +168,20 @@ function goldUpgradeMax(t){
   );
 
   saveGame();
-  drawCommon();
+  drawAll();
 }
 
 createEnemy();
 
-drawBattle();
-drawCommon();
+drawAll();
 
 let last=0;
 
-function loop(time){
+function gameLoop(time){
 
-  let interval=Math.max(
+  const interval=Math.max(
     100,
-    1000-(bonus.speed*5)
+    1000-bonus.speed*5
   );
 
   if(time-last>=interval){
@@ -207,7 +191,7 @@ function loop(time){
     last=time;
   }
 
-  requestAnimationFrame(loop);
+  requestAnimationFrame(gameLoop);
 }
 
-requestAnimationFrame(loop);
+requestAnimationFrame(gameLoop);
