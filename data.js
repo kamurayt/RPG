@@ -1,4 +1,5 @@
 const slots=[
+
   ["weapon","武器"],
   ["head","頭"],
   ["armor","鎧"],
@@ -9,17 +10,36 @@ const slots=[
   ["necklace","ネックレス"],
   ["bracelet","腕輪"],
   ["pet","ペット"]
+
 ];
 
 const rarityOrder=[
-  "N","R","HR","SR","SSR",
-  "UR","LR","MR","GR","EX",
-  "Z","ZZ","ZZZ","Ω",
-  "神","超神","創世","終焉","虚無"
+
+  "N",
+  "R",
+  "HR",
+  "SR",
+  "SSR",
+  "UR",
+  "LR",
+  "MR",
+  "GR",
+  "EX",
+  "Z",
+  "ZZ",
+  "ZZZ",
+  "Ω",
+  "神",
+  "超神",
+  "創世",
+  "終焉",
+  "虚無"
+
 ];
 
 const rarityColors={
-  N:"#aaa",
+
+  N:"#999",
   R:"#4caf50",
   HR:"#03a9f4",
   SR:"#9c27b0",
@@ -27,7 +47,7 @@ const rarityColors={
   UR:"#ff4444",
   LR:"#ff00ff",
   MR:"#ff8800",
-  GR:"#fff",
+  GR:"#ffffff",
   EX:"#00ffff",
   Z:"#66ffcc",
   ZZ:"#66ccff",
@@ -37,47 +57,62 @@ const rarityColors={
   "超神":"#ffcc00",
   "創世":"#00ff99",
   "終焉":"#9999ff",
-  "虚無":"#ddd"
+  "虚無":"#dddddd"
+
 };
 
-function dungeonName(){
-  return {
-    normal:"通常",
-    gold:"ゴールドD",
-    upgrade:"強化素材D",
-    awake:"覚醒素材D",
-    gacha:"ガチャD"
-  }[player.dungeon];
-}
+function slotName(slot){
 
-function enemyName(){
-  const list=[
-    "スライム",
-    "ゴブリン",
-    "ウルフ",
-    "スケルトン",
-    "魔獣",
-    "ドラゴン"
-  ];
-
-  return list[player.floor % list.length];
+  return slots.find(
+    s=>s[0]===slot
+  )[1];
 }
 
 function equipName(slot){
+
   return {
-    weapon:"剣",
-    head:"兜",
-    armor:"鎧",
-    pants:"ズボン",
-    shoes:"靴",
-    gloves:"手袋",
-    wing:"羽",
+
+    weapon:"ソード",
+    head:"ヘルム",
+    armor:"アーマー",
+    pants:"レギンス",
+    shoes:"ブーツ",
+    gloves:"ガントレット",
+    wing:"ウイング",
     necklace:"ネックレス",
-    bracelet:"腕輪",
+    bracelet:"ブレスレット",
     pet:"ペット"
+
   }[slot];
 }
 
-function slotName(slot){
-  return slots.find(s=>s[0]===slot)[1];
+function enemyName(){
+
+  const list=[
+
+    "スライム",
+    "ゴブリン",
+    "オーク",
+    "ドラゴン",
+    "デーモン",
+    "フェニックス"
+
+  ];
+
+  return list[
+    player.floor%list.length
+  ];
+}
+
+function dungeonName(){
+
+  return {
+
+    normal:"通常",
+    gold:"ゴールド",
+    upgrade:"強化素材",
+    awake:"覚醒素材",
+    gacha:"ガチャ"
+
+  }[player.dungeon];
 }
