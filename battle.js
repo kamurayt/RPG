@@ -1,9 +1,15 @@
 function createEnemy(){
 
-  let boss=player.floor%5===0;
+  const boss=player.floor%5===0;
 
   enemy={
-    name:boss?"階層ボス":enemyName(),
+
+    name:
+      boss
+      ?
+      "階層ボス"
+      :
+      enemyName(),
 
     maxHp:Math.floor(
       50*
@@ -19,20 +25,17 @@ function createEnemy(){
       (boss?1.8:1)
     ),
 
-    boss:boss
+    boss
   };
 
   enemy.hp=enemy.maxHp;
-
-  drawBattle();
-  drawCommon();
 }
 
-function dropChance(base,bonusVal){
+function drop(base,bonusValue){
 
   return (
     Math.random()*100<
-    Math.min(100,base+bonusVal)
+    Math.min(100,base+bonusValue)
   );
 }
 
@@ -40,64 +43,72 @@ function attack(){
 
   calcStats();
 
-  let dmg=Math.max(
+  let damage=Math.max(
     1,
-    player.atk-Math.floor(player.floor/2)
+    player.atk-
+    Math.floor(player.floor/2)
   );
 
-  enemy.hp-=dmg;
+  enemy.hp-=damage;
 
   if(enemy.hp<0){
     enemy.hp=0;
   }
 
-  let log="与ダメージ："+dmg;
+  let log=
+    "与ダメージ："+damage;
 
   if(Math.random()*100<bonus.multi){
 
-    enemy.hp-=dmg;
+    enemy.hp-=damage;
 
     if(enemy.hp<0){
       enemy.hp=0;
     }
 
-    log+="<br>連撃発動！ +"+dmg;
+    log+="<br>連撃！+"+damage;
   }
 
-  battleLog(log);
+  setBattleLog(log);
 
   if(enemy.hp<=0){
     winBattle();
-  }else{
+  }
+
+  else{
     enemyAttack();
   }
 
-  drawBattle();
-  drawCommon();
+  drawAll();
 }
 
 function enemyAttack(){
 
-  let dmg=Math.max(
+  let damage=Math.max(
     1,
     enemy.atk-player.def
   );
 
-  player.hp-=dmg;
+  player.hp-=damage;
 
   if(player.hp<0){
     player.hp=0;
   }
 
-  battleLogAdd("被ダメージ："+dmg);
+  addBattleLog(
+    "被ダメージ："+damage
+  );
 
   if(player.hp<=0){
 
-    player.floor=Math.max(1,player.floor-1);
+    player.floor=Math.max(
+      1,
+      player.floor-1
+    );
 
     player.hp=player.maxHp;
 
-    showEffect("敗北…1階戻った");
+    showEffect("敗北");
 
     createEnemy();
   }
@@ -128,11 +139,16 @@ function winBattle(){
 
   calcStats();
 
-  let m=rewardMult();
+  const m=rewardMult();
 
-  let bossBonus=enemy.boss?6:1;
+  const bossBonus=
+    enemy.boss
+    ?
+    6
+    :
+    1;
 
-  let gold=Math.floor(
+  const gold=Math.floor(
     20*
     Math.pow(1.14,player.floor)*
     bossBonus*
@@ -140,7 +156,7 @@ function winBattle(){
     (1+bonus.gold/100)
   );
 
-  let exp=Math.floor(
+  const exp=Math.floor(
     12*
     Math.pow(1.13,player.floor)*
     bossBonus*
@@ -148,20 +164,20 @@ function winBattle(){
     (1+bonus.exp/100)
   );
 
-  let gachaItem=0;
+  let gacha=0;
   let upgrade=0;
   let awake=0;
 
-  if(enemy.boss || dropChance(20,bonus.gacha)){
+  if(enemy.boss || drop(20,bonus.gacha)){
 
-    gachaItem=Math.floor(
+    gacha=Math.floor(
       (enemy.boss?8:1)*
       Math.pow(1.05,player.floor)*
       m.ga
     );
   }
 
-  if(enemy.boss || dropChance(50,bonus.upgrade)){
+  if(enemy.boss || drop(50,bonus.upgrade)){
 
     upgrade=Math.floor(
       (enemy.boss?15:1)*
@@ -170,7 +186,7 @@ function winBattle(){
     );
   }
 
-  if(enemy.boss || dropChance(25,bonus.awake)){
+  if(enemy.boss || drop(25,bonus.awake)){
 
     awake=Math.floor(
       (enemy.boss?3:1)*
@@ -181,22 +197,25 @@ function winBattle(){
 
   player.gold+=gold;
   player.exp+=exp;
-
-  player.gachaStone+=Math.max(0,gachaItem);
+  player.gachaStone+=Math.max(0,gacha);
   player.upgradeStone+=Math.max(0,upgrade);
   player.awakeStone+=Math.max(0,awake);
 
-  if(enemy.boss && player.dungeon==="normal"){
+  if(
+    enemy.boss &&
+    player.dungeon==="normal"
+  ){
     player.dungeonKey++;
   }
 
-  battleLog(
+  setBattleLog(
     enemy.name+
     "撃破！<br>"+
-    "+"+gold+"G +"+exp+"EXP<br>"+
-    "ガチャ+"+gachaItem+
-    " 強化素材+"+upgrade+
-    " 覚醒素材+"+awake
+    "+"+gold+"G "+
+    "+"+exp+"EXP<br>"+
+    "ガチャ+"+gacha+
+    " 強化+"+upgrade+
+    " 覚醒+"+awake
   );
 
   while(player.exp>=needExp()){
@@ -211,7 +230,7 @@ function winBattle(){
 
     player.hp=player.maxHp;
 
-    showEffect("レベルアップ！");
+    showEffect("レベルUP");
   }
 
   player.floor+=
@@ -228,7 +247,7 @@ function changeDungeon(type){
   if(type!=="normal"){
 
     if(player.dungeonKey<=0){
-      showEffect("鍵が足りない");
+      showEffect("鍵不足");
       return;
     }
 
@@ -241,11 +260,13 @@ function changeDungeon(type){
 
   player.hp=player.maxHp;
 
-  showEffect(dungeonName()+"へ移動");
-
   createEnemy();
+
+  showEffect(
+    dungeonName()+"へ移動"
+  );
 
   saveGame();
 
-  drawCommon();
+  drawAll();
 }
