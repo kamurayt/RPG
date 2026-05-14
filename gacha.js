@@ -1,12 +1,12 @@
 function getRates(){
 
-  let lv=player.gachaLv;
+  const lv=player.gachaLv;
 
-  let rates={};
+  const rates={};
 
   rarityOrder.forEach((r,i)=>{
 
-    let unlock=i*8+1;
+    const unlock=i*8+1;
 
     rates[r]=
       lv>=unlock
@@ -19,7 +19,7 @@ function getRates(){
       0;
   });
 
-  let total=Object.values(rates)
+  const total=Object.values(rates)
     .reduce((a,b)=>a+b,0);
 
   rarityOrder.forEach(r=>{
@@ -31,17 +31,17 @@ function getRates(){
 
 function rollRarity(){
 
-  let rates=getRates();
+  const rates=getRates();
 
-  let rand=Math.random()*100;
+  const randValue=Math.random()*100;
 
   let sum=0;
 
-  for(let r of rarityOrder){
+  for(const r of rarityOrder){
 
     sum+=rates[r];
 
-    if(rand<=sum){
+    if(randValue<=sum){
       return r;
     }
   }
@@ -49,14 +49,12 @@ function rollRarity(){
   return "N";
 }
 
-function gacha(count){
+function drawGacha(count){
 
-  let results=[];
-  let rareResults=[];
-
+  let result=[];
   let sold=0;
-  let gainUp=0;
-  let gainAw=0;
+  let up=0;
+  let aw=0;
 
   for(let i=0;i<count;i++){
 
@@ -66,17 +64,17 @@ function gacha(count){
 
     player.gachaStone--;
 
-    let e=createEquipment();
+    const e=createEquipment();
 
     if(shouldAutoSell(e)){
 
-      let gain=sellGain(e);
+      const gain=sellGain(e);
 
-      player.upgradeStone+=gain.up;
-      player.awakeStone+=gain.aw;
+      player.upgradeStone+=gain.upgrade;
+      player.awakeStone+=gain.awake;
 
-      gainUp+=gain.up;
-      gainAw+=gain.aw;
+      up+=gain.upgrade;
+      aw+=gain.awake;
 
       sold++;
     }
@@ -85,72 +83,34 @@ function gacha(count){
 
       player.equipments.push(e);
 
-      let txt=
-        `<span style="color:${rarityColors[e.rarity]}">`+
-        `${e.rarity}</span> `+
-        `${slotName(e.slot)} ${e.name}`;
+      if(result.length<20){
 
-      results.push(txt);
-
-      if(
-        rarityIndex(e.rarity)>=rarityIndex("SSR")
-      ){
-        rareResults.push(txt);
+        result.push(
+          `<span style="color:${rarityColors[e.rarity]}">${e.rarity}</span> `+
+          `${slotName(e.slot)} ${e.name}`
+        );
       }
     }
 
     player.gachaExp++;
 
-    while(
-      player.gachaExp>=needGachaExp()
-    ){
+    while(player.gachaExp>=needGachaExp()){
+
       player.gachaExp-=needGachaExp();
+
       player.gachaLv++;
-      showEffect("ガチャLvUP！");
+
+      showEffect("ガチャLvUP");
     }
   }
 
-  let text="";
-
-  if(count>=100){
-
-    text=
-      `100連結果：入手${results.length}個 / 自動売却${sold}個`;
-
-    if(sold>0){
-      text+=
-        `<br>売却獲得：強化+${gainUp} 覚醒+${gainAw}`;
-    }
-
-    text+=
-      `<br>SSR以上：<br>`+
-      (
-        rareResults.join("<br>")||
-        "なし"
-      );
-  }
-
-  else{
-
-    text=
-      results.join("<br")||
-      "全て自動売却 or ガチャアイテム不足";
-
-    if(sold>0){
-      text+=
-        `<br>自動売却${sold}個：強化+${gainUp} 覚醒+${gainAw}`;
-    }
-  }
-
-  document.getElementById("gachaResult")
-    .innerHTML=text;
+  document.getElementById("gachaResult").innerHTML=
+    `表示：${result.length}件<br>`+
+    result.join("<br>")+
+    `<br>自動売却：${sold}個`+
+    `<br>強化素材+${up} 覚醒素材+${aw}`;
 
   saveGame();
-  drawCommon();
 
-  if(activeTab==="equipTab"){
-    renderEquipList();
-  }
+  drawAll();
 }
-
-function shouldAutoSell(e){
