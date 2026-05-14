@@ -1,272 +1,443 @@
-function safeSet(id,value){
+function setText(id,value){
+
   const el=document.getElementById(id);
-  if(el) el.textContent=value;
+
+  if(el){
+    el.textContent=value;
+  }
 }
 
-function safeHTML(id,value){
+function setHTML(id,value){
+
   const el=document.getElementById(id);
-  if(el) el.innerHTML=value;
+
+  if(el){
+    el.innerHTML=value;
+  }
+}
+
+function drawBattle(){
+
+  setText("dungeonName",dungeonName());
+  setText("floorText",player.floor+"F");
+  setText("enemyName",enemy.name);
+  setText("enemyAtk",enemy.atk);
+  setText("enemyHpText",enemy.hp+" / "+enemy.maxHp);
+
+  const bar=document.getElementById("enemyHpFill");
+
+  if(bar){
+    bar.style.width=
+      (enemy.hp/enemy.maxHp*100)+"%";
+  }
+}
+
+function drawStatus(){
+
+  calcStats();
+
+  setHTML("statusArea",`
+
+<div class="statLine">
+<span>Lv</span>
+<span>${player.level}</span>
+</div>
+
+<div class="statLine">
+<span>HP</span>
+<span>${Math.floor(player.hp)} / ${player.maxHp}</span>
+</div>
+
+<div class="statLine">
+<span>攻撃</span>
+<span>${player.atk}</span>
+</div>
+
+<div class="statLine">
+<span>防御</span>
+<span>${player.def}</span>
+</div>
+
+<div class="statLine">
+<span>EXP</span>
+<span>${Math.floor(player.exp)} / ${needExp()}</span>
+</div>
+
+<div class="statLine">
+<span>ゴールド</span>
+<span>${Math.floor(player.gold)}</span>
+</div>
+
+<div class="statLine">
+<span>ガチャ</span>
+<span>${player.gachaStone}</span>
+</div>
+
+<div class="statLine">
+<span>強化素材</span>
+<span>${player.upgradeStone}</span>
+</div>
+
+<div class="statLine">
+<span>覚醒素材</span>
+<span>${player.awakeStone}</span>
+</div>
+
+<hr>
+
+<div class="statLine">
+<span>経験値UP</span>
+<span>+${bonus.exp}%</span>
+</div>
+
+<div class="statLine">
+<span>ゴールドUP</span>
+<span>+${bonus.gold}%</span>
+</div>
+
+<div class="statLine">
+<span>ガチャ率</span>
+<span>${Math.min(100,20+bonus.gacha)}%</span>
+</div>
+
+<div class="statLine">
+<span>強化素材率</span>
+<span>${Math.min(100,50+bonus.upgrade)}%</span>
+</div>
+
+<div class="statLine">
+<span>覚醒素材率</span>
+<span>${Math.min(100,25+bonus.awake)}%</span>
+</div>
+
+<div class="statLine">
+<span>ゲーム速度</span>
+<span>+${bonus.speed}%</span>
+</div>
+
+<div class="statLine">
+<span>連撃率</span>
+<span>${bonus.multi}%</span>
+</div>
+
+<div class="statLine">
+<span>階層スキップ</span>
+<span>${Math.floor(bonus.skip/100)}</span>
+</div>
+`);
 }
 
 function drawSlotButtons(){
 
-  const el=document.getElementById("slotButtons");
-  if(!el)return;
-
   let html=`
-<button class="slotBtn ${equipFilter==="all"?"activeSlot":""}"
-onclick="setEquipFilter('all')">
+<button onclick="setEquipFilter('all')">
 全部
-</button>`;
+</button>
+`;
 
   for(const [slot,label] of slots){
 
-    let idx=player.equipped[slot];
+    const index=player.equipped[slot];
 
-    let mark=
-      idx!==null &&
-      player.equipments[idx]
+    const mark=
+      index!==null &&
+      player.equipments[index]
       ?
       "★"
       :
       "";
 
     html+=`
-<button
-class="slotBtn ${equipFilter===slot?"activeSlot":""}"
-onclick="setEquipFilter('${slot}')">
+<button onclick="setEquipFilter('${slot}')">
 ${mark}${label}
-</button>`;
+</button>
+`;
   }
 
-  el.innerHTML=html;
+  setHTML("slotButtons",html);
 }
 
 function drawBulkSellButtons(){
 
-  const el=document.getElementById("bulkSellButtons");
-  if(!el)return;
-
   let html="";
 
   for(const r of unlockedRarities()){
+
     html+=`
 <button onclick="sellAll('${r}')">
 ${r}以下売却
-</button>`;
+</button>
+`;
   }
 
-  el.innerHTML=html;
+  setHTML("bulkSellButtons",html);
 }
 
-function drawAutoSellSelect(){
+function drawAutoSell(){
 
-  const el=document.getElementById("autoSellSelect");
-  if(!el)return;
-
-  let options=`<option value="off">OFF</option>`;
+  let html=`
+<option value="off">
+OFF
+</option>
+`;
 
   for(const r of unlockedRarities()){
-    options+=`
-<option value="${r}" ${player.autoSellRank===r?"selected":""}>
+
+    html+=`
+<option value="${r}" ${player.autoSell===r?"selected":""}>
 ${r}以下
-</option>`;
+</option>
+`;
   }
 
-  el.innerHTML=options;
-  el.value=player.autoSellRank||"off";
-}
+  setHTML("autoSellSelect",html);
 
-function drawBattle(){
+  const el=document.getElementById("autoSellSelect");
 
-  safeSet("dungeonName",dungeonName());
-  safeSet("floor",player.floor+"F");
-  safeSet("enemyName",enemy.name||"");
-  safeSet("enemyAtk",enemy.atk||"");
-  safeSet("enemyHpText",(enemy.hp||0)+" / "+(enemy.maxHp||0));
-
-  const fill=document.getElementById("enemyHpFill");
-  if(fill && enemy.maxHp){
-    fill.style.width=(enemy.hp/enemy.maxHp*100)+"%";
+  if(el){
+    el.value=player.autoSell;
   }
 }
 
-function drawCommon(){
-
-  calcStats();
-
-  safeHTML("statusList",`
-<div class="statLine"><span>Lv</span><span>${player.level}</span></div>
-<div class="statLine"><span>HP</span><span>${Math.floor(player.hp)} / ${player.maxHp}</span></div>
-<div class="statLine"><span>攻撃</span><span>${player.atk}</span></div>
-<div class="statLine"><span>防御</span><span>${player.def}</span></div>
-<div class="statLine"><span>EXP</span><span>${Math.floor(player.exp)} / ${needExp()}</span></div>
-<div class="statLine"><span>ゴールド</span><span>${Math.floor(player.gold)}</span></div>
-<div class="statLine"><span>ガチャアイテム</span><span>${player.gachaStone}</span></div>
-<div class="statLine"><span>強化素材</span><span>${player.upgradeStone}</span></div>
-<div class="statLine"><span>覚醒素材</span><span>${player.awakeStone}</span></div>
-
-<hr>
-
-<div class="statLine"><span>経験値UP</span><span>+${bonus.exp}%</span></div>
-<div class="statLine"><span>ゴールドUP</span><span>+${bonus.gold}%</span></div>
-<div class="statLine"><span>ガチャ率</span><span>${Math.min(100,20+bonus.gacha)}%</span></div>
-<div class="statLine"><span>強化素材率</span><span>${Math.min(100,50+bonus.upgrade)}%</span></div>
-<div class="statLine"><span>覚醒素材率</span><span>${Math.min(100,25+bonus.awake)}%</span></div>
-<div class="statLine"><span>ゲーム速度</span><span>+${bonus.speed}%</span></div>
-<div class="statLine"><span>連撃率</span><span>${bonus.multi}%</span></div>
-<div class="statLine"><span>階層スキップ</span><span>${Math.floor(bonus.skip/100)}</span></div>
-`);
-
-  safeSet("point",player.point);
-
-  safeSet("hpPointInfo","次上昇："+statAddValue("hp"));
-  safeSet("atkPointInfo","次上昇："+statAddValue("atk"));
-  safeSet("defPointInfo","次上昇："+statAddValue("def"));
-
-  safeSet("goldAtkLv",player.goldAtkLv);
-  safeSet("goldDefLv",player.goldDefLv);
-  safeSet("goldAtkBonus",player.goldAtkLv*10);
-  safeSet("goldDefBonus",player.goldDefLv*10);
-  safeSet("goldAtkCost",goldCost(player.goldAtkLv));
-  safeSet("goldDefCost",goldCost(player.goldDefLv));
-
-  safeSet("gachaLv",player.gachaLv);
-  safeSet("gachaExp",player.gachaExp);
-  safeSet("needGachaExp",needGachaExp());
-  safeSet("gachaStone2",player.gachaStone);
-
-  safeSet("currentDungeon",dungeonName());
-  safeSet("dungeonKey",player.dungeonKey);
-
-  let rates=getRates();
-
-  safeHTML(
-    "rateText",
-    rarityOrder
-    .filter(r=>rates[r]>0)
-    .map(r=>`<span style="color:${rarityColors[r]}">${r}</span>：${rates[r].toFixed(2)}%`)
-    .join("<br>")
-  );
+function drawEquip(){
 
   drawSlotButtons();
   drawBulkSellButtons();
-  drawAutoSellSelect();
-}
-
-function renderEquipList(){
-
-  drawSlotButtons();
-  drawBulkSellButtons();
-  drawAutoSellSelect();
-
-  const el=document.getElementById("equipList");
-  if(!el)return;
-
-  let list=sortedEquipments();
-
-  if(list.length===0){
-    el.innerHTML=`<div class="item">この部位の装備なし</div>`;
-    return;
-  }
+  drawAutoSell();
 
   let html="";
 
-  for(let v of list){
+  const list=sortedEquipments();
 
-    let e=v.e;
-    let i=v.i;
+  if(list.length===0){
 
-    let eq=isEquipped(i);
-    let lim=upgradeLimit(e);
+    setHTML(
+      "equipList",
+      `<div class="item">装備なし</div>`
+    );
+
+    return;
+  }
+
+  for(const {e,i} of list){
+
+    const equipped=isEquipped(i);
 
     html+=`
-<div class="item ${eq?"equipped":""}">
 
-${eq?"【装備中】 ":""}
-<span style="color:${rarityColors[e.rarity]};font-weight:bold;">
+<div class="item ${equipped?"equipped":""}">
+
+${equipped?"【装備中】":""}
+
+<span style="
+color:${rarityColors[e.rarity]};
+font-weight:bold;
+">
 ${e.rarity}
 </span>
-${slotName(e.slot)} ${e.name}
+
+${slotName(e.slot)}
+${e.name}
 
 <br>
 
-攻撃 +${finalEquipPower(e,"atk")}
-防御 +${finalEquipPower(e,"def")}
-HP +${finalEquipPower(e,"hp")}
+攻撃 +${equipFinal(e,"atk")}
+防御 +${equipFinal(e,"def")}
+HP +${equipFinal(e,"hp")}
 
 <br>
 
-品質${e.quality}%
-強化 +${e.upgrade}/${lim}
+品質 ${e.quality}%
+強化 +${e.upgrade}/${equipLimit(e)}
 覚醒 +${e.awake}
 
 <br>
 
 OP：
-${e.option1} /
-${e.option2} /
-${e.option3}
+${e.op1}
+/
+${e.op2}
+/
+${e.op3}
 
 <br>
 
-<button onclick="equipItem(${i})">装備</button>
-<button onclick="upgradeItem(${i},1)">+1</button>
-<button onclick="upgradeItem(${i},10)">+10</button>
-<button onclick="upgradeItem(${i},100)">+100</button>
-<button onclick="upgradeMax(${i})">最大</button>
-<button onclick="awakeItem(${i})">覚醒</button>
-<button onclick="sellEquip(${i})">売却</button>
+<button onclick="equipItem(${i})">
+装備
+</button>
 
-</div>`;
+<button onclick="upgradeEquip(${i},1)">
++1
+</button>
+
+<button onclick="upgradeEquip(${i},10)">
++10
+</button>
+
+<button onclick="upgradeEquip(${i},100)">
++100
+</button>
+
+<button onclick="upgradeEquipMax(${i})">
+最大
+</button>
+
+<button onclick="awakeEquip(${i})">
+覚醒
+</button>
+
+<button onclick="sellEquip(${i})">
+売却
+</button>
+
+</div>
+`;
   }
 
-  el.innerHTML=html;
+  setHTML("equipList",html);
 }
 
-function showTab(id,btn){
+function drawPlayerUpgrade(){
 
-  activeTab=id;
+  setText("pointText",player.point);
+
+  setHTML("pointArea",`
+
+<div class="item">
+<b>HP強化</b>
+<br>
+<button onclick="addStat('hp',1)">+1</button>
+<button onclick="addStat('hp',10)">+10</button>
+<button onclick="addStat('hp',100)">+100</button>
+<button onclick="addStatMax('hp')">最大</button>
+</div>
+
+<div class="item">
+<b>攻撃強化</b>
+<br>
+<button onclick="addStat('atk',1)">+1</button>
+<button onclick="addStat('atk',10)">+10</button>
+<button onclick="addStat('atk',100)">+100</button>
+<button onclick="addStatMax('atk')">最大</button>
+</div>
+
+<div class="item">
+<b>防御強化</b>
+<br>
+<button onclick="addStat('def',1)">+1</button>
+<button onclick="addStat('def',10)">+10</button>
+<button onclick="addStat('def',100)">+100</button>
+<button onclick="addStatMax('def')">最大</button>
+</div>
+`);
+
+  setHTML("goldUpgradeArea",`
+
+<div class="item">
+<b>攻撃倍率</b>
+<br>
+Lv ${player.goldAtkLv}
+<br>
+<button onclick="goldUpgrade('atk',1)">+1</button>
+<button onclick="goldUpgrade('atk',10)">+10</button>
+<button onclick="goldUpgrade('atk',100)">+100</button>
+<button onclick="goldUpgradeMax('atk')">最大</button>
+</div>
+
+<div class="item">
+<b>防御倍率</b>
+<br>
+Lv ${player.goldDefLv}
+<br>
+<button onclick="goldUpgrade('def',1)">+1</button>
+<button onclick="goldUpgrade('def',10)">+10</button>
+<button onclick="goldUpgrade('def',100)">+100</button>
+<button onclick="goldUpgradeMax('def')">最大</button>
+</div>
+`);
+}
+
+function drawGachaUI(){
+
+  setText("gachaLv",player.gachaLv);
+  setText("gachaExp",player.gachaExp);
+  setText("needGachaExp",needGachaExp());
+  setText("gachaStoneText",player.gachaStone);
+
+  const rates=getRates();
+
+  setHTML(
+    "rateArea",
+    rarityOrder
+      .filter(r=>rates[r]>0)
+      .map(r=>
+        `<span style="color:${rarityColors[r]}">${r}</span>：${rates[r].toFixed(2)}%`
+      )
+      .join("<br>")
+  );
+}
+
+function drawDungeon(){
+
+  setText("currentDungeon",dungeonName());
+  setText("dungeonKey",player.dungeonKey);
+}
+
+function drawAll(){
+
+  drawBattle();
+  drawStatus();
+  drawEquip();
+  drawPlayerUpgrade();
+  drawGachaUI();
+  drawDungeon();
+}
+
+function openTab(id,btn){
+
+  currentTab=id;
 
   document
-    .querySelectorAll("#battleTab,#equipTab,#playerTab,#gachaTab,#dungeonTab")
-    .forEach(e=>e.classList.add("hidden"));
+    .querySelectorAll("section")
+    .forEach(s=>s.classList.add("hidden"));
 
-  const target=document.getElementById(id);
-  if(target)target.classList.remove("hidden");
+  document
+    .getElementById(id)
+    .classList.remove("hidden");
 
   document
     .querySelectorAll(".tab")
-    .forEach(e=>e.classList.remove("active"));
+    .forEach(t=>t.classList.remove("activeTab"));
 
-  if(btn)btn.classList.add("active");
+  btn.classList.add("activeTab");
 
-  drawCommon();
+  drawAll();
+}
 
-  if(id==="equipTab"){
-    renderEquipList();
+function setBattleLog(text){
+
+  setHTML("battleLog",text);
+}
+
+function addBattleLog(text){
+
+  const el=document.getElementById("battleLog");
+
+  if(el){
+    el.innerHTML+="<br>"+text;
   }
 }
 
-function battleLog(t){
-  safeHTML("battleLog",t);
-}
+function showEffect(text){
 
-function battleLogAdd(t){
-  const el=document.getElementById("battleLog");
-  if(el)el.innerHTML+="<br>"+t;
-}
+  const div=document.createElement("div");
 
-function showEffect(t){
+  div.className="effect";
+  div.textContent=text;
 
-  let d=document.createElement("div");
-
-  d.className="effect";
-  d.textContent=t;
-
-  document.body.appendChild(d);
+  document.body.appendChild(div);
 
   setTimeout(()=>{
-    d.remove();
+    div.remove();
   },1000);
 }
