@@ -156,7 +156,25 @@ function calcStats(){resetBonus();let atk=player.baseAtk*(1+player.goldAtkLv*.1)
 function randomOp(rarity,slot){let list=["HP増加","攻撃力増加","防御力増加","獲得経験値増加","獲得ゴールド増加","獲得ガチャアイテム増加","獲得強化素材増加","獲得覚醒素材増加","ゲーム速度上昇","連撃率上昇","階層スキップ数"];if(slot==="shoes")list.push("ゲーム速度上昇","ゲーム速度上昇");if(slot==="wing")list.push("階層スキップ数","階層スキップ数");if(slot==="bracelet")list.push("連撃率上昇","連撃率上昇");let r=rarityIndex(rarity),min=1+r*5,max=Math.min(100,min+4+r*2);return list[rand(0,list.length-1)]+" +"+rand(min,max)+"%"}
 function createEquipment(){let rarity=rollRarity(),r=rarityIndex(rarity),slot=slots[rand(0,slots.length-1)][0],q=rand(85,115),val=Math.floor(rand(1+r*8,8+r*12)*Math.pow(1.08,player.floor)*q/100);let e={id:Date.now()+"_"+Math.random().toString(36).slice(2),slot,name:equipName(slot),rarity,quality:q,atk:0,def:0,hp:0,upgrade:0,awake:0,op1:randomOp(rarity,slot),op2:randomOp(rarity,slot),op3:randomOp(rarity,slot)};if(slot==="weapon")e.atk=val*3;else if(["head","armor","pants","gloves"].includes(slot)){e.def=val*2;e.hp=val*5}else if(["shoes","wing"].includes(slot)){e.def=val;e.hp=val*3}else{e.atk=val;e.hp=val*2}return e}
 
-function equipItem(id){let e=player.equipments.find(x=>x.id===id);if(!e)return;player.equipped[e.slot]=e.id;show("装備変更");saveGame();drawAll()}
+function equipItem(id){
+
+  let e = player.equipments.find(
+    x => x.id === id
+  );
+
+  if(!e){
+    return;
+  }
+
+  player.equipped[e.slot] = e.id;
+
+  show("装備変更");
+
+  saveGame();
+
+  drawEquip();
+  drawStatus();
+}
 function isEquipped(i){let e=player.equipments[i];return e&&Object.values(player.equipped).includes(e.id)}
 function sellGain(e){let r=rarityIndex(e.rarity);return{u:1+r*3+e.upgrade,a:Math.floor(r/2)+e.awake}}
 function sellEquip(i){if(isEquipped(i)){show("装備中は売却不可");return}let e=player.equipments[i],g=sellGain(e);player.upgradeStone+=g.u;player.awakeStone+=g.a;player.equipments.splice(i,1);show("売却");saveGame();drawAll()}
