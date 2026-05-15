@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Infinite Dungeon RPG</title>
+<style>
+body{margin:0;background:#101018;color:white;font-family:sans-serif}
+#version{position:fixed;top:5px;right:5px;background:#000;padding:4px 8px;border-radius:8px;z-index:9999;font-size:12px}
+#game{max-width:560px;margin:auto;padding-bottom:110px}
+.panel{background:#202030;margin:10px;padding:12px;border-radius:14px}
+.title{font-size:24px;font-weight:bold;margin-bottom:10px}
+.hpBar{width:100%;height:20px;background:#444;border-radius:999px;overflow:hidden;margin:10px 0}
+#enemyHpFill{height:100%;background:#ff4444}
+button,select{background:#353545;color:white;border:none;border-radius:8px;padding:8px;margin:4px;font-size:14px}
+.item{background:#2a2a3a;padding:10px;margin:10px 0;border-radius:10px}
+.equipped{border:3px solid gold;box-shadow:0 0 12px gold;background:#3a3420}
+.activeSlot{background:#008f5a!important;box-shadow:0 0 8px #00d080}
+.hidden{display:none}
+.tabBar{position:fixed;bottom:0;left:0;width:100%;display:flex;background:#181820;z-index:9998}
+.tab{flex:1;border-radius:0;margin:0;padding:14px 0}
+.activeTab{background:#505070}
+#battleLog,#gachaResult{margin-top:10px;color:#ffd54f;line-height:1.5}
+.statLine{display:flex;justify-content:space-between;border-bottom:1px solid #333;padding:5px 0;gap:10px}
+.effect{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#00aa66;padding:10px 20px;border-radius:10px;z-index:9999}
+</style>
+</head>
+<body>
+
+<div id="version">ver 4.0.1</div>
+
+<div id="game">
+<section id="battleTab">
+<div class="panel">
+<div class="title"><span id="dungeonName"></span> <span id="floorText"></span></div>
+<div>敵：<span id="enemyName"></span></div>
+<div>敵攻撃：<span id="enemyAtk"></span></div>
+<div class="hpBar"><div id="enemyHpFill"></div></div>
+<div id="enemyHpText"></div>
+<div id="battleLog"></div>
+</div>
+<div class="panel">
+<div class="title">ステータス</div>
+<div id="statusArea"></div>
+</div>
+</section>
+
+<section id="equipTab" class="hidden">
+<div class="panel">
+<div class="title">装備</div>
+<div id="slotButtons"></div>
+<select onchange="sortType=this.value;drawEquip();">
+<option value="new">新着順</option>
+<option value="rarity">レア順</option>
+<option value="power">戦力順</option>
+<option value="upgrade">強化順</option>
+<option value="awake">覚醒順</option>
+<option value="exp">経験値OP</option>
+<option value="gold">ゴールドOP</option>
+<option value="gacha">ガチャOP</option>
+<option value="upgradeMat">強化素材OP</option>
+<option value="awakeMat">覚醒素材OP</option>
+<option value="speed">ゲーム速度OP</option>
+<option value="multi">連撃OP</option>
+<option value="skip">階層スキップOP</option>
+</select>
+<div>一括売却</div>
+<div id="bulkSellButtons"></div>
+<div>自動売却</div>
+<select id="autoSellSelect" onchange="setAutoSell(this.value)"></select>
+<div id="equipList"></div>
+</div>
+</section>
+
+<section id="playerTab" class="hidden">
+<div class="panel">
+<div class="title">ステータス強化</div>
+<div id="pointArea"></div>
+</div>
+<div class="panel">
+<div class="title">ゴールド強化</div>
+<div id="goldUpgradeArea"></div>
+</div>
+</section>
+
+<section id="gachaTab" class="hidden">
+<div class="panel">
+<div class="title">ガチャ</div>
+<div>ガチャLv：<span id="gachaLv"></span></div>
+<div>ガチャEXP：<span id="gachaExp"></span> / <span id="needGachaExp"></span></div>
+<div>ガチャアイテム：<span id="gachaStoneText"></span></div>
+<hr>
+<div id="rateArea"></div>
+<button onclick="drawGacha(1)">1回</button>
+<button onclick="drawGacha(10)">10回</button>
+<button onclick="drawGacha(100)">100回</button>
+<div id="gachaResult"></div>
+</div>
+</section>
+
+<section id="dungeonTab" class="hidden">
+<div class="panel">
+<div class="title">ダンジョン</div>
+<div>現在：<span id="currentDungeon"></span></div>
+<div>鍵：<span id="dungeonKey"></span></div>
+<button onclick="changeDungeon('normal')">通常</button>
+<button onclick="changeDungeon('gold')">ゴールド</button>
+<button onclick="changeDungeon('upgrade')">強化素材</button>
+<button onclick="changeDungeon('awake')">覚醒素材</button>
+<button onclick="changeDungeon('gacha')">ガチャ</button>
+</div>
+</section>
+</div>
+
+<div class="tabBar">
+<button class="tab activeTab" onclick="openTab('battleTab',this)">戦闘</button>
+<button class="tab" onclick="openTab('equipTab',this)">装備</button>
+<button class="tab" onclick="openTab('playerTab',this)">強化</button>
+<button class="tab" onclick="openTab('gachaTab',this)">ガチャ</button>
+<button class="tab" onclick="openTab('dungeonTab',this)">D</button>
+</div>
+
+<script>
+const SAVE_KEY="RPG_SINGLE_FULL_401";
+const slots=[["weapon","武器"],["head","頭"],["armor","鎧"],["pants","ズボン"],["shoes","靴"],["gloves","手袋"],["wing","羽"],["necklace","ネックレス"],["bracelet","腕輪"],["pet","ペット"]];
+const rarityOrder=["N","R","HR","SR","SSR","UR","LR","MR","GR","EX","Z","ZZ","ZZZ","Ω","神","超神","創世","終焉","虚無"];
+const rarityColors={N:"#999",R:"#4caf50",HR:"#03a9f4",SR:"#9c27b0",SSR:"#ffd700",UR:"#ff4444",LR:"#ff00ff",MR:"#ff8800",GR:"#fff",EX:"#00ffff",Z:"#66ffcc",ZZ:"#66ccff",ZZZ:"#cc66ff","Ω":"#ff66cc","神":"#ffff66","超神":"#ffcc00","創世":"#00ff99","終焉":"#9999ff","虚無":"#ddd"};
+
+function basePlayer(){return{floor:1,level:1,exp:0,gold:0,gachaStone:30,upgradeStone:0,awakeStone:0,dungeonKey:0,point:0,baseHp:100,baseAtk:10,baseDef:5,hp:100,goldAtkLv:0,goldDefLv:0,gachaLv:1,gachaExp:0,equipments:[],equipped:{weapon:null,head:null,armor:null,pants:null,shoes:null,gloves:null,wing:null,necklace:null,bracelet:null,pet:null},dungeon:"normal",atkCount:0,defCount:0,hpCount:0,autoSell:"off"}}
+function loadGame(){try{return{...basePlayer(),...JSON.parse(localStorage.getItem(SAVE_KEY)||"{}")}}catch{return basePlayer()}}
+function saveGame(){localStorage.setItem(SAVE_KEY,JSON.stringify(player))}
+let player=loadGame(),enemy={},equipFilter="all",sortType="new",bonus={};
+
+function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a}
+function rarityIndex(r){return Math.max(0,rarityOrder.indexOf(r))}
+function slotName(s){return slots.find(x=>x[0]===s)[1]}
+function equipName(s){return{weapon:"ソード",head:"ヘルム",armor:"アーマー",pants:"レギンス",shoes:"ブーツ",gloves:"ガントレット",wing:"ウイング",necklace:"ネックレス",bracelet:"ブレスレット",pet:"ペット"}[s]}
+function dungeonName(){return{normal:"通常",gold:"ゴールド",upgrade:"強化素材",awake:"覚醒素材",gacha:"ガチャ"}[player.dungeon]}
+function enemyName(){return["スライム","ゴブリン","オーク","ドラゴン","デーモン","フェニックス"][player.floor%6]}
+function needExp(){return Math.floor(50*Math.pow(1.18,player.level))}
+function needGachaExp(){return Math.floor(10+player.gachaLv*5)}
+function goldCost(lv){return Math.floor(100*Math.pow(1.25,lv))}
+function getNum(t){let m=String(t).match(/\d+/);return m?Number(m[0]):0}
+function unlockedRarities(){return rarityOrder.slice(0,Math.min(rarityOrder.length,Math.floor((player.gachaLv-1)/8)+1))}
+
+function resetBonus(){bonus={hp:0,atk:0,def:0,exp:0,gold:0,gacha:0,upgrade:0,awake:0,speed:0,multi:0,skip:0}}
+function applyOp(op){let v=getNum(op);if(op.includes("HP"))bonus.hp+=v;if(op.includes("攻撃"))bonus.atk+=v;if(op.includes("防御"))bonus.def+=v;if(op.includes("経験値"))bonus.exp+=v;if(op.includes("ゴールド"))bonus.gold+=v;if(op.includes("ガチャ"))bonus.gacha+=v;if(op.includes("強化素材"))bonus.upgrade+=v;if(op.includes("覚醒素材"))bonus.awake+=v;if(op.includes("ゲーム速度"))bonus.speed+=v;if(op.includes("連撃"))bonus.multi+=v;if(op.includes("階層スキップ"))bonus.skip+=v}
+function equipFinal(e,t){return Math.floor((e[t]||0)*(1+e.upgrade*.1)*(1+e.awake*.2))}
+function equipPower(e){return equipFinal(e,"atk")+equipFinal(e,"def")+Math.floor(equipFinal(e,"hp")/5)}
+function equipLimit(e){return 10+e.awake*10}
+function upGold(e){return Math.floor((80+rarityIndex(e.rarity)*25)*Math.pow(1.18,e.upgrade))}
+function upStone(e){return 1+Math.floor(e.upgrade/5)+rarityIndex(e.rarity)}
+function awStone(e){return Math.floor((5+rarityIndex(e.rarity)*4)*Math.pow(e.awake+1,2))}
+function calcStats(){resetBonus();let atk=player.baseAtk*(1+player.goldAtkLv*.1),def=player.baseDef*(1+player.goldDefLv*.1),hp=player.baseHp;for(let s of slots){let id=player.equipped[s[0]],e=player.equipments.find(x=>x.id===id);if(e){atk+=equipFinal(e,"atk");def+=equipFinal(e,"def");hp+=equipFinal(e,"hp");[e.op1,e.op2,e.op3].forEach(applyOp)}}player.atk=Math.floor(atk*(1+bonus.atk/100));player.def=Math.floor(def*(1+bonus.def/100));player.maxHp=Math.floor(hp*(1+bonus.hp/100));if(player.hp>player.maxHp)player.hp=player.maxHp}
+
+function randomOp(rarity,slot){let list=["HP増加","攻撃力増加","防御力増加","獲得経験値増加","獲得ゴールド増加","獲得ガチャアイテム増加","獲得強化素材増加","獲得覚醒素材増加","ゲーム速度上昇","連撃率上昇","階層スキップ数"];if(slot==="shoes")list.push("ゲーム速度上昇","ゲーム速度上昇");if(slot==="wing")list.push("階層スキップ数","階層スキップ数");if(slot==="bracelet")list.push("連撃率上昇","連撃率上昇");let r=rarityIndex(rarity),min=1+r*5,max=Math.min(100,min+4+r*2);return list[rand(0,list.length-1)]+" +"+rand(min,max)+"%"}
+function createEquipment(){let rarity=rollRarity(),r=rarityIndex(rarity),slot=slots[rand(0,slots.length-1)][0],q=rand(85,115),val=Math.floor(rand(1+r*8,8+r*12)*Math.pow(1.08,player.floor)*q/100);let e={id:Date.now()+"_"+Math.random().toString(36).slice(2),slot,name:equipName(slot),rarity,quality:q,atk:0,def:0,hp:0,upgrade:0,awake:0,op1:randomOp(rarity,slot),op2:randomOp(rarity,slot),op3:randomOp(rarity,slot)};if(slot==="weapon")e.atk=val*3;else if(["head","armor","pants","gloves"].includes(slot)){e.def=val*2;e.hp=val*5}else if(["shoes","wing"].includes(slot)){e.def=val;e.hp=val*3}else{e.atk=val;e.hp=val*2}return e}
+
+function equipItem(id){let e=player.equipments.find(x=>x.id===id);if(!e)return;player.equipped[e.slot]=e.id;show("装備変更");saveGame();drawAll()}
+function isEquipped(i){let e=player.equipments[i];return e&&Object.values(player.equipped).includes(e.id)}
+function sellGain(e){let r=rarityIndex(e.rarity);return{u:1+r*3+e.upgrade,a:Math.floor(r/2)+e.awake}}
+function sellEquip(i){if(isEquipped(i)){show("装備中は売却不可");return}let e=player.equipments[i],g=sellGain(e);player.upgradeStone+=g.u;player.awakeStone+=g.a;player.equipments.splice(i,1);show("売却");saveGame();drawAll()}
+function sellAll(r){let lim=rarityIndex(r),sold=0;for(let i=player.equipments.length-1;i>=0;i--){let e=player.equipments[i];if(e&&!isEquipped(i)&&rarityIndex(e.rarity)<=lim){let g=sellGain(e);player.upgradeStone+=g.u;player.awakeStone+=g.a;player.equipments.splice(i,1);sold++}}show(sold+"個売却");saveGame();drawAll()}
+function upgradeEquip(i,n){let e=player.equipments[i],done=0;if(!e)return;for(let k=0;k<n;k++){if(e.upgrade>=equipLimit(e))break;if(player.gold<upGold(e)||player.upgradeStone<upStone(e))break;player.gold-=upGold(e);player.upgradeStone-=upStone(e);e.upgrade++;done++}show(done?"強化+"+done:"素材不足");saveGame();drawAll()}
+function awakeEquip(i){let e=player.equipments[i];if(!e)return;if(player.awakeStone<awStone(e)){show("覚醒素材不足");return}player.awakeStone-=awStone(e);e.awake++;show("覚醒+"+e.awake);saveGame();drawAll()}
+function optScore(e,key){return[e.op1,e.op2,e.op3].filter(x=>x.includes(key)).reduce((s,x)=>s+getNum(x),0)}
+function sortedEquipments(){let a=player.equipments.map((e,i)=>({e,i}));if(equipFilter!=="all")a=a.filter(v=>v.e.slot===equipFilter);a.sort((x,y)=>sortType==="rarity"?rarityIndex(y.e.rarity)-rarityIndex(x.e.rarity):sortType==="power"?equipPower(y.e)-equipPower(x.e):sortType==="upgrade"?y.e.upgrade-x.e.upgrade:sortType==="awake"?y.e.awake-x.e.awake:sortType==="exp"?optScore(y.e,"経験値")-optScore(x.e,"経験値"):sortType==="gold"?optScore(y.e,"ゴールド")-optScore(x.e,"ゴールド"):sortType==="gacha"?optScore(y.e,"ガチャ")-optScore(x.e,"ガチャ"):sortType==="upgradeMat"?optScore(y.e,"強化素材")-optScore(x.e,"強化素材"):sortType==="awakeMat"?optScore(y.e,"覚醒素材")-optScore(x.e,"覚醒素材"):sortType==="speed"?optScore(y.e,"ゲーム速度")-optScore(x.e,"ゲーム速度"):sortType==="multi"?optScore(y.e,"連撃")-optScore(x.e,"連撃"):sortType==="skip"?optScore(y.e,"階層スキップ")-optScore(x.e,"階層スキップ"):y.i-x.i);return a}
+function setEquipFilter(s){equipFilter=s;drawEquip()}
+function setAutoSell(v){player.autoSell=v;saveGame();drawEquip()}
+function shouldAutoSell(e){return player.autoSell!=="off"&&rarityIndex(e.rarity)<=rarityIndex(player.autoSell)}
+
+function getRates(){let rates={};rarityOrder.forEach((r,i)=>rates[r]=player.gachaLv>=i*8+1?Math.max(.01,100/Math.pow(i+1,2.2)):0);let t=Object.values(rates).reduce((a,b)=>a+b,0);rarityOrder.forEach(r=>rates[r]=rates[r]/t*100);return rates}
+function rollRarity(){let rates=getRates(),v=Math.random()*100,s=0;for(let r of rarityOrder){s+=rates[r];if(v<=s)return r}return"N"}
+function drawGacha(n){let res=[],sold=0;for(let i=0;i<n;i++){if(player.gachaStone<=0)break;player.gachaStone--;let e=createEquipment();if(shouldAutoSell(e)){let g=sellGain(e);player.upgradeStone+=g.u;player.awakeStone+=g.a;sold++}else{player.equipments.push(e);if(res.length<20)res.push(`<span style="color:${rarityColors[e.rarity]}">${e.rarity}</span> ${slotName(e.slot)}`)}player.gachaExp++;while(player.gachaExp>=needGachaExp()){player.gachaExp-=needGachaExp();player.gachaLv++;show("ガチャLvUP")}}document.getElementById("gachaResult").innerHTML=res.join("<br>")+"<br>自動売却："+sold+"個";saveGame();drawAll()}
+
+function createEnemy(){let boss=player.floor%5===0;enemy={name:boss?"階層ボス":enemyName(),maxHp:Math.floor(50*Math.pow(1.13,player.floor)*(boss?3:1)),hp:0,atk:Math.floor(5*Math.pow(1.11,player.floor)*(boss?1.8:1)),boss};enemy.hp=enemy.maxHp}
+function mult(){return player.dungeon==="gold"?{g:5,e:1,u:.5,a:0,ga:.5}:player.dungeon==="upgrade"?{g:.5,e:1,u:5,a:0,ga:.5}:player.dungeon==="awake"?{g:.5,e:1,u:.5,a:5,ga:.5}:player.dungeon==="gacha"?{g:.5,e:1,u:.5,a:0,ga:5}:{g:1,e:1,u:1,a:0,ga:1}}
+function drop(p,b){return Math.random()*100<Math.min(100,p+b)}
+function attack(){calcStats();let dmg=Math.max(1,player.atk-Math.floor(player.floor/2));enemy.hp-=dmg;let log="与ダメージ："+dmg;if(Math.random()*100<bonus.multi){enemy.hp-=dmg;log+="<br>連撃！+"+dmg}if(enemy.hp<=0)winBattle(log);else{let ed=Math.max(1,enemy.atk-player.def);player.hp-=ed;log+="<br>被ダメージ："+ed;if(player.hp<=0){player.floor=Math.max(1,player.floor-1);player.hp=player.maxHp;createEnemy();log+="<br>敗北"}}document.getElementById("battleLog").innerHTML=log;drawAll();saveGame()}
+function winBattle(log){let m=mult(),bb=enemy.boss?6:1,gold=Math.floor(20*Math.pow(1.14,player.floor)*bb*m.g*(1+bonus.gold/100)),exp=Math.floor(12*Math.pow(1.13,player.floor)*bb*m.e*(1+bonus.exp/100)),ga=0,up=0,aw=0;if(enemy.boss||drop(20,bonus.gacha))ga=Math.floor((enemy.boss?8:1)*Math.pow(1.05,player.floor)*m.ga);if(enemy.boss||drop(50,bonus.upgrade))up=Math.floor((enemy.boss?15:1)*Math.pow(1.04,player.floor)*m.u);if(enemy.boss||drop(25,bonus.awake))aw=Math.floor((enemy.boss?3:1)*Math.pow(1.03,player.floor)*m.a);player.gold+=gold;player.exp+=exp;player.gachaStone+=Math.max(0,ga);player.upgradeStone+=Math.max(0,up);player.awakeStone+=Math.max(0,aw);if(enemy.boss&&player.dungeon==="normal")player.dungeonKey++;while(player.exp>=needExp()){player.exp-=needExp();player.level++;player.point+=5;player.baseHp+=20;player.hp=player.maxHp;show("LvUP")}player.floor+=1+Math.floor(bonus.skip/100);createEnemy();document.getElementById("battleLog").innerHTML=log+"<br>撃破！ +"+gold+"G +"+exp+"EXP<br>ガチャ+"+ga+" 強化+"+up+" 覚醒+"+aw}
+function changeDungeon(t){if(t!=="normal"){if(player.dungeonKey<=0){show("鍵不足");return}player.dungeonKey--}player.dungeon=t;player.floor=1;player.hp=player.maxHp;createEnemy();saveGame();drawAll()}
+
+function setText(id,v){document.getElementById(id).textContent=v}
+function setHTML(id,v){document.getElementById(id).innerHTML=v}
+function drawBattle(){setText("dungeonName",dungeonName());setText("floorText",player.floor+"F");setText("enemyName",enemy.name);setText("enemyAtk",enemy.atk);setText("enemyHpText",enemy.hp+" / "+enemy.maxHp);document.getElementById("enemyHpFill").style.width=(enemy.hp/enemy.maxHp*100)+"%"}
+function drawStatus(){calcStats();setHTML("statusArea",`<div class="statLine"><span>Lv</span><span>${player.level}</span></div><div class="statLine"><span>HP</span><span>${Math.floor(player.hp)} / ${player.maxHp}</span></div><div class="statLine"><span>攻撃</span><span>${player.atk}</span></div><div class="statLine"><span>防御</span><span>${player.def}</span></div><div class="statLine"><span>EXP</span><span>${Math.floor(player.exp)} / ${needExp()}</span></div><div class="statLine"><span>ゴールド</span><span>${Math.floor(player.gold)}</span></div><div class="statLine"><span>ガチャ</span><span>${player.gachaStone}</span></div><div class="statLine"><span>強化素材</span><span>${player.upgradeStone}</span></div><div class="statLine"><span>覚醒素材</span><span>${player.awakeStone}</span></div><hr><div class="statLine"><span>経験値UP</span><span>+${bonus.exp}%</span></div><div class="statLine"><span>ゴールドUP</span><span>+${bonus.gold}%</span></div><div class="statLine"><span>ガチャ率</span><span>${Math.min(100,20+bonus.gacha)}%</span></div><div class="statLine"><span>強化素材率</span><span>${Math.min(100,50+bonus.upgrade)}%</span></div><div class="statLine"><span>覚醒素材率</span><span>${Math.min(100,25+bonus.awake)}%</span></div><div class="statLine"><span>速度</span><span>+${bonus.speed}%</span></div><div class="statLine"><span>連撃</span><span>${bonus.multi}%</span></div><div class="statLine"><span>階層スキップ</span><span>${Math.floor(bonus.skip/100)}</span></div>`)}
+function drawEquip(){let sh=`<button class="${equipFilter==="all"?"activeSlot":""}" onclick="setEquipFilter('all')">全部</button>`;for(let[s,l]of slots)sh+=`<button class="${equipFilter===s?"activeSlot":""}" onclick="setEquipFilter('${s}')">${player.equipped[s]?"★":""}${l}</button>`;setHTML("slotButtons",sh);let bs="";for(let r of unlockedRarities())bs+=`<button onclick="sellAll('${r}')">${r}以下売却</button>`;setHTML("bulkSellButtons",bs);setHTML("autoSellSelect",`<option value="off">OFF</option>`+unlockedRarities().map(r=>`<option value="${r}" ${player.autoSell===r?"selected":""}>${r}以下</option>`).join(""));let html="",list=sortedEquipments();if(!list.length){setHTML("equipList",`<div class="item">装備なし</div>`);return}for(let{e,i}of list){let eq=player.equipped[e.slot]===e.id;html+=`<div class="item ${eq?"equipped":""}">${eq?'<div style="color:gold;font-weight:bold;">【装備中】</div>':""}<span style="color:${rarityColors[e.rarity]};font-weight:bold;">${e.rarity}</span> ${slotName(e.slot)} ${e.name}<br>攻撃 +${equipFinal(e,"atk")} 防御 +${equipFinal(e,"def")} HP +${equipFinal(e,"hp")}<br>品質${e.quality}% 強化+${e.upgrade}/${equipLimit(e)} 覚醒+${e.awake}<br>次強化:${upGold(e)}G/素材${upStone(e)} 次覚醒:${awStone(e)}<br>OP:${e.op1} / ${e.op2} / ${e.op3}<br><button onclick="equipItem('${e.id}')">装備</button><button onclick="upgradeEquip(${i},1)">+1</button><button onclick="upgradeEquip(${i},10)">+10</button><button onclick="upgradeEquip(${i},100)">+100</button><button onclick="upgradeEquip(${i},999999)">最大</button><button onclick="awakeEquip(${i})">覚醒</button><button onclick="sellEquip(${i})">売却</button></div>`}setHTML("equipList",html)}
+function drawPlayer(){setHTML("pointArea",`<div class="item">ポイント:${player.point}<br><button onclick="addStat('hp',1)">HP+1</button><button onclick="addStat('atk',1)">攻撃+1</button><button onclick="addStat('def',1)">防御+1</button><button onclick="addStat('hp',100)">HP+100</button><button onclick="addStat('atk',100)">攻撃+100</button><button onclick="addStat('def',100)">防御+100</button></div>`);setHTML("goldUpgradeArea",`<div class="item">攻撃倍率 Lv${player.goldAtkLv}<br><button onclick="goldUp('atk',1)">+1</button><button onclick="goldUp('atk',10)">+10</button><button onclick="goldUp('atk',100)">+100</button></div><div class="item">防御倍率 Lv${player.goldDefLv}<br><button onclick="goldUp('def',1)">+1</button><button onclick="goldUp('def',10)">+10</button><button onclick="goldUp('def',100)">+100</button></div>`)}
+function addStat(t,n){for(let i=0;i<n;i++){if(player.point<=0)break;let add=t==="atk"?5:t==="def"?3:20;player.point--;if(t==="atk"){player.baseAtk+=add;player.atkCount++}if(t==="def"){player.baseDef+=add;player.defCount++}if(t==="hp"){player.baseHp+=add;player.hp+=add;player.hpCount++}}saveGame();drawAll()}
+function goldUp(t,n){for(let i=0;i<n;i++){let lv=t==="atk"?player.goldAtkLv:player.goldDefLv,c=goldCost(lv);if(player.gold<c)break;player.gold-=c;if(t==="atk")player.goldAtkLv++;else player.goldDefLv++}saveGame();drawAll()}
+function drawGachaUI(){setText("gachaLv",player.gachaLv);setText("gachaExp",player.gachaExp);setText("needGachaExp",needGachaExp());setText("gachaStoneText",player.gachaStone);setHTML("rateArea",rarityOrder.filter(r=>getRates()[r]>0).map(r=>`<span style="color:${rarityColors[r]}">${r}</span>:${getRates()[r].toFixed(2)}%`).join("<br>"))}
+function drawDungeon(){setText("currentDungeon",dungeonName());setText("dungeonKey",player.dungeonKey)}
+function drawAll(){drawBattle();drawStatus();drawEquip();drawPlayer();drawGachaUI();drawDungeon()}
+function openTab(id,b){document.querySelectorAll("section").forEach(s=>s.classList.add("hidden"));document.getElementById(id).classList.remove("hidden");document.querySelectorAll(".tab").forEach(t=>t.classList.remove("activeTab"));b.classList.add("activeTab");drawAll()}
+function show(t){let d=document.createElement("div");d.className="effect";d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),900)}
+createEnemy();drawAll();let last=0;function loop(t){let int=Math.max(100,1000-bonus.speed*5);if(t-last>=int){attack();last=t}requestAnimationFrame(loop)}requestAnimationFrame(loop);
+</script>
+</body>
+</html>
