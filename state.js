@@ -1,53 +1,112 @@
 let saved=loadGame();
 
-let player=saved||{
+let player=saved||{};
 
-  floor:1,
-  level:1,
-  exp:0,
+function initPlayer(){
 
-  gold:0,
-  gachaStone:30,
-  upgradeStone:0,
-  awakeStone:0,
-  dungeonKey:0,
+  const base={
+    floor:1,
+    level:1,
+    exp:0,
 
-  point:0,
+    gold:0,
+    gachaStone:30,
+    upgradeStone:0,
+    awakeStone:0,
+    dungeonKey:0,
 
-  baseHp:100,
-  baseAtk:10,
-  baseDef:5,
-  hp:100,
+    point:0,
 
-  goldAtkLv:0,
-  goldDefLv:0,
+    baseHp:100,
+    baseAtk:10,
+    baseDef:5,
+    hp:100,
 
-  gachaLv:1,
-  gachaExp:0,
+    goldAtkLv:0,
+    goldDefLv:0,
 
-  equipments:[],
+    gachaLv:1,
+    gachaExp:0,
 
-  equipped:{
-    weapon:null,
-    head:null,
-    armor:null,
-    pants:null,
-    shoes:null,
-    gloves:null,
-    wing:null,
-    necklace:null,
-    bracelet:null,
-    pet:null
-  },
+    equipments:[],
 
-  dungeon:"normal",
+    equipped:{
+      weapon:null,
+      head:null,
+      armor:null,
+      pants:null,
+      shoes:null,
+      gloves:null,
+      wing:null,
+      necklace:null,
+      bracelet:null,
+      pet:null
+    },
 
-  atkCount:0,
-  defCount:0,
-  hpCount:0,
+    dungeon:"normal",
 
-  autoSell:"off"
-};
+    atkCount:0,
+    defCount:0,
+    hpCount:0,
+
+    autoSell:"off"
+  };
+
+  player={
+    ...base,
+    ...player,
+    equipped:{
+      ...base.equipped,
+      ...(player.equipped||{})
+    }
+  };
+
+  if(!Array.isArray(player.equipments)){
+    player.equipments=[];
+  }
+
+  player.equipments.forEach(e=>{
+
+    if(!e.id){
+      e.id=
+        Date.now().toString()+
+        "_"+
+        Math.random().toString(36).slice(2);
+    }
+
+    if(e.option1&&!e.op1)e.op1=e.option1;
+    if(e.option2&&!e.op2)e.op2=e.option2;
+    if(e.option3&&!e.op3)e.op3=e.option3;
+
+    if(!e.op1)e.op1="HP増加 +0%";
+    if(!e.op2)e.op2="攻撃力増加 +0%";
+    if(!e.op3)e.op3="防御力増加 +0%";
+
+    if(e.awake===undefined)e.awake=0;
+    if(e.upgrade===undefined)e.upgrade=0;
+    if(e.quality===undefined)e.quality=100;
+  });
+
+  for(const [slot] of slots){
+
+    const v=player.equipped[slot];
+
+    if(typeof v==="number"){
+
+      const e=player.equipments[v];
+
+      player.equipped[slot]=e?e.id:null;
+    }
+  }
+
+  if(player.autoSellRank&&!player.autoSell){
+    player.autoSell=player.autoSellRank;
+  }
+
+  saveGame();
+}
+
+initPlayer();
 
 let enemy={};
 
@@ -77,13 +136,6 @@ function resetBonus(){
 function getEquipById(id){
 
   return player.equipments.find(
-    e=>e.id===id
-  );
-}
-
-function getEquipIndexById(id){
-
-  return player.equipments.findIndex(
     e=>e.id===id
   );
 }
