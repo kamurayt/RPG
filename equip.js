@@ -48,7 +48,6 @@ function awakeStoneCost(e){
 function createEquipment(){
 
   const rarity=rollRarity();
-
   const r=rarityIndex(rarity);
 
   const slot=
@@ -73,7 +72,11 @@ function createEquipment(){
   );
 
   const e={
-    id:Date.now()+Math.random(),
+    id:
+      Date.now().toString()+
+      "_" +
+      Math.random().toString(36).slice(2),
+
     slot,
     name:equipName(slot),
     rarity,
@@ -190,8 +193,12 @@ function randomOption(rarity,slot){
 
 function isEquipped(index){
 
+  const e=player.equipments[index];
+
+  if(!e)return false;
+
   return Object.values(player.equipped)
-    .includes(index);
+    .includes(e.id);
 }
 
 function equipItem(index){
@@ -200,7 +207,7 @@ function equipItem(index){
 
   if(!e)return;
 
-  player.equipped[e.slot]=index;
+  player.equipped[e.slot]=e.id;
 
   showEffect(
     slotName(e.slot)+"装備"
@@ -212,20 +219,18 @@ function equipItem(index){
 
 function removeEquipment(index){
 
-  player.equipments.splice(index,1);
+  const e=player.equipments[index];
+
+  if(!e)return;
 
   for(const key in player.equipped){
 
-    const v=player.equipped[key];
-
-    if(v===index){
+    if(player.equipped[key]===e.id){
       player.equipped[key]=null;
     }
-
-    else if(v!==null && v>index){
-      player.equipped[key]--;
-    }
   }
+
+  player.equipments.splice(index,1);
 }
 
 function sellGain(e){
@@ -280,6 +285,7 @@ function sellAll(rarity){
     const e=player.equipments[i];
 
     if(
+      e &&
       !isEquipped(i) &&
       rarityIndex(e.rarity)<=limit
     ){
