@@ -74,6 +74,20 @@ function resetBonus(){
   };
 }
 
+function getEquipById(id){
+
+  return player.equipments.find(
+    e=>e.id===id
+  );
+}
+
+function getEquipIndexById(id){
+
+  return player.equipments.findIndex(
+    e=>e.id===id
+  );
+}
+
 function calcStats(){
 
   resetBonus();
@@ -84,19 +98,26 @@ function calcStats(){
 
   for(const [slot] of slots){
 
-    const index=player.equipped[slot];
+    const id=player.equipped[slot];
 
-    if(index!==null && player.equipments[index]){
+    if(id!==null){
 
-      const e=player.equipments[index];
+      const e=getEquipById(id);
 
-      atk+=equipFinal(e,"atk");
-      def+=equipFinal(e,"def");
-      hp+=equipFinal(e,"hp");
+      if(e){
 
-      applyOption(e.op1);
-      applyOption(e.op2);
-      applyOption(e.op3);
+        atk+=equipFinal(e,"atk");
+        def+=equipFinal(e,"def");
+        hp+=equipFinal(e,"hp");
+
+        applyOption(e.op1);
+        applyOption(e.op2);
+        applyOption(e.op3);
+      }
+
+      else{
+        player.equipped[slot]=null;
+      }
     }
   }
 
