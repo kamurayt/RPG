@@ -6,22 +6,20 @@
 
 <title>Infinite Dungeon RPG</title>
 
-<link rel="stylesheet" href="style.css?v=1.0.0">
+<link rel="stylesheet" href="style.css?v=1.0.1">
 </head>
 
 <body>
 
 <div id="version">
-ver 1.0.0
+ver 1.0.1
 </div>
 
 <div id="game">
 
-  <!-- 戦闘 -->
   <section id="battleTab">
 
     <div class="panel">
-
       <div class="title">
         <span id="dungeonName"></span>
         <span id="floorText"></span>
@@ -42,35 +40,24 @@ ver 1.0.0
       </div>
 
       <div id="enemyHpText"></div>
-
       <div id="battleLog"></div>
-
     </div>
 
     <div class="panel">
-
-      <div class="title">
-        ステータス
-      </div>
-
+      <div class="title">ステータス</div>
       <div id="statusArea"></div>
-
     </div>
 
   </section>
 
-  <!-- 装備 -->
   <section id="equipTab" class="hidden">
 
     <div class="panel">
-
-      <div class="title">
-        装備
-      </div>
+      <div class="title">装備</div>
 
       <div id="slotButtons"></div>
 
-      <select id="sortSelect">
+      <select id="sortSelect" onchange="sortType=this.value;drawEquip();">
         <option value="new">新着順</option>
         <option value="rarity">レア順</option>
         <option value="power">戦力順</option>
@@ -78,32 +65,21 @@ ver 1.0.0
         <option value="awake">覚醒順</option>
       </select>
 
-      <div class="smallTitle">
-        一括売却
-      </div>
-
+      <div class="smallTitle">一括売却</div>
       <div id="bulkSellButtons"></div>
 
-      <div class="smallTitle">
-        自動売却
-      </div>
-
-      <select id="autoSellSelect"></select>
+      <div class="smallTitle">自動売却</div>
+      <select id="autoSellSelect" onchange="setAutoSell(this.value)"></select>
 
       <div id="equipList"></div>
-
     </div>
 
   </section>
 
-  <!-- 強化 -->
   <section id="playerTab" class="hidden">
 
     <div class="panel">
-
-      <div class="title">
-        ステータス強化
-      </div>
+      <div class="title">ステータス強化</div>
 
       <div>
         ポイント：
@@ -111,29 +87,19 @@ ver 1.0.0
       </div>
 
       <div id="pointArea"></div>
-
     </div>
 
     <div class="panel">
-
-      <div class="title">
-        ゴールド強化
-      </div>
-
+      <div class="title">ゴールド強化</div>
       <div id="goldUpgradeArea"></div>
-
     </div>
 
   </section>
 
-  <!-- ガチャ -->
   <section id="gachaTab" class="hidden">
 
     <div class="panel">
-
-      <div class="title">
-        ガチャ
-      </div>
+      <div class="title">ガチャ</div>
 
       <div>
         ガチャLv：
@@ -156,36 +122,19 @@ ver 1.0.0
 
       <div id="rateArea"></div>
 
-      <div class="gachaButtons">
-
-        <button onclick="drawGacha(1)">
-          1回
-        </button>
-
-        <button onclick="drawGacha(10)">
-          10回
-        </button>
-
-        <button onclick="drawGacha(100)">
-          100回
-        </button>
-
-      </div>
+      <button onclick="drawGacha(1)">1回</button>
+      <button onclick="drawGacha(10)">10回</button>
+      <button onclick="drawGacha(100)">100回</button>
 
       <div id="gachaResult"></div>
-
     </div>
 
   </section>
 
-  <!-- ダンジョン -->
   <section id="dungeonTab" class="hidden">
 
     <div class="panel">
-
-      <div class="title">
-        ダンジョン
-      </div>
+      <div class="title">ダンジョン</div>
 
       <div>
         現在：
@@ -197,71 +146,40 @@ ver 1.0.0
         <span id="dungeonKey"></span>
       </div>
 
-      <div class="dungeonButtons">
-
-        <button onclick="changeDungeon('normal')">
-          通常
-        </button>
-
-        <button onclick="changeDungeon('gold')">
-          ゴールド
-        </button>
-
-        <button onclick="changeDungeon('upgrade')">
-          強化素材
-        </button>
-
-        <button onclick="changeDungeon('awake')">
-          覚醒素材
-        </button>
-
-        <button onclick="changeDungeon('gacha')">
-          ガチャ
-        </button>
-
-      </div>
+      <button onclick="changeDungeon('normal')">通常</button>
+      <button onclick="changeDungeon('gold')">ゴールド</button>
+      <button onclick="changeDungeon('upgrade')">強化素材</button>
+      <button onclick="changeDungeon('awake')">覚醒素材</button>
+      <button onclick="changeDungeon('gacha')">ガチャ</button>
 
       <div class="desc">
         ボス撃破でダンジョンキー獲得
       </div>
-
     </div>
 
   </section>
 
 </div>
 
-<!-- 下タブ -->
-
 <div class="tabBar">
 
-  <button
-    class="tab activeTab"
-    onclick="openTab('battleTab',this)">
+  <button class="tab activeTab" onclick="openTab('battleTab',this)">
     戦闘
   </button>
 
-  <button
-    class="tab"
-    onclick="openTab('equipTab',this)">
+  <button class="tab" onclick="openTab('equipTab',this)">
     装備
   </button>
 
-  <button
-    class="tab"
-    onclick="openTab('playerTab',this)">
+  <button class="tab" onclick="openTab('playerTab',this)">
     強化
   </button>
 
-  <button
-    class="tab"
-    onclick="openTab('gachaTab',this)">
+  <button class="tab" onclick="openTab('gachaTab',this)">
     ガチャ
   </button>
 
-  <button
-    class="tab"
-    onclick="openTab('dungeonTab',this)">
+  <button class="tab" onclick="openTab('dungeonTab',this)">
     D
   </button>
 
