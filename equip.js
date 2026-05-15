@@ -1,457 +1,472 @@
-function equipLimit(e){
-  return 10+e.awake*10;
+function setText(id,value){
+
+  const el=document.getElementById(id);
+
+  if(el){
+    el.textContent=value;
+  }
 }
 
-function equipFinal(e,type){
+function setHTML(id,value){
 
-  return Math.floor(
-    (e[type]||0)*
-    (1+e.upgrade*0.1)*
-    (1+e.awake*0.2)
-  );
+  const el=document.getElementById(id);
+
+  if(el){
+    el.innerHTML=value;
+  }
 }
 
-function equipPower(e){
+function drawBattle(){
 
-  return (
-    equipFinal(e,"atk")+
-    equipFinal(e,"def")+
-    Math.floor(equipFinal(e,"hp")/5)
-  );
+  setText("dungeonName",dungeonName());
+  setText("floorText",player.floor+"F");
+  setText("enemyName",enemy.name);
+  setText("enemyAtk",enemy.atk);
+  setText("enemyHpText",enemy.hp+" / "+enemy.maxHp);
+
+  const bar=document.getElementById("enemyHpFill");
+
+  if(bar){
+    bar.style.width=
+      (enemy.hp/enemy.maxHp*100)+"%";
+  }
 }
 
-function upgradeGoldCost(e){
+function drawStatus(){
 
-  return Math.floor(
-    (80+rarityIndex(e.rarity)*25)*
-    Math.pow(1.18,e.upgrade)
-  );
+  calcStats();
+
+  setHTML("statusArea",`
+
+<div class="statLine">
+<span>Lv</span>
+<span>${player.level}</span>
+</div>
+
+<div class="statLine">
+<span>HP</span>
+<span>${Math.floor(player.hp)} / ${player.maxHp}</span>
+</div>
+
+<div class="statLine">
+<span>攻撃</span>
+<span>${player.atk}</span>
+</div>
+
+<div class="statLine">
+<span>防御</span>
+<span>${player.def}</span>
+</div>
+
+<div class="statLine">
+<span>EXP</span>
+<span>${Math.floor(player.exp)} / ${needExp()}</span>
+</div>
+
+<div class="statLine">
+<span>ゴールド</span>
+<span>${Math.floor(player.gold)}</span>
+</div>
+
+<div class="statLine">
+<span>ガチャ</span>
+<span>${player.gachaStone}</span>
+</div>
+
+<div class="statLine">
+<span>強化素材</span>
+<span>${player.upgradeStone}</span>
+</div>
+
+<div class="statLine">
+<span>覚醒素材</span>
+<span>${player.awakeStone}</span>
+</div>
+
+<hr>
+
+<div class="statLine">
+<span>経験値UP</span>
+<span>+${bonus.exp}%</span>
+</div>
+
+<div class="statLine">
+<span>ゴールドUP</span>
+<span>+${bonus.gold}%</span>
+</div>
+
+<div class="statLine">
+<span>ガチャ率</span>
+<span>${Math.min(100,20+bonus.gacha)}%</span>
+</div>
+
+<div class="statLine">
+<span>強化素材率</span>
+<span>${Math.min(100,50+bonus.upgrade)}%</span>
+</div>
+
+<div class="statLine">
+<span>覚醒素材率</span>
+<span>${Math.min(100,25+bonus.awake)}%</span>
+</div>
+
+<div class="statLine">
+<span>ゲーム速度</span>
+<span>+${bonus.speed}%</span>
+</div>
+
+<div class="statLine">
+<span>連撃率</span>
+<span>${bonus.multi}%</span>
+</div>
+
+<div class="statLine">
+<span>階層スキップ</span>
+<span>${Math.floor(bonus.skip/100)}</span>
+</div>
+`);
 }
 
-function upgradeStoneCost(e){
+function drawSlotButtons(){
 
-  return (
-    1+
-    Math.floor(e.upgrade/5)+
-    rarityIndex(e.rarity)
-  );
-}
+  let html=`
+<button
+class="${
+equipFilter==="all"
+?
+"activeSlot"
+:
+""
+}"
+onclick="setEquipFilter('all')">
+全部
+</button>
+`;
 
-function awakeStoneCost(e){
+  for(const [slot,label] of slots){
 
-  return Math.floor(
-    (5+rarityIndex(e.rarity)*4)*
-    Math.pow(e.awake+1,2)
-  );
-}
+    const equippedId=
+      player.equipped[slot];
 
-function createEquipment(){
+    const mark=
+      equippedId
+      ?
+      "★"
+      :
+      "";
 
-  const rarity=rollRarity();
-  const r=rarityIndex(rarity);
-
-  const slot=
-    slots[
-      rand(0,slots.length-1)
-    ][0];
-
-  const quality=rand(85,115);
-
-  const base=rand(
-    1+r*8,
-    8+r*12
-  );
-
-  const floorBonus=
-    Math.pow(1.08,player.floor);
-
-  const value=Math.floor(
-    base*
-    floorBonus*
-    quality/100
-  );
-
-  const e={
-    id:
-      Date.now().toString()+
-      "_" +
-      Math.random().toString(36).slice(2),
-
-    slot,
-    name:equipName(slot),
-    rarity,
-    quality,
-
-    atk:0,
-    def:0,
-    hp:0,
-
-    upgrade:0,
-    awake:0,
-
-    op1:randomOption(rarity,slot),
-    op2:randomOption(rarity,slot),
-    op3:randomOption(rarity,slot)
-  };
-
-  if(slot==="weapon"){
-    e.atk=value*3;
+    html+=`
+<button
+class="${
+equipFilter===slot
+?
+"activeSlot"
+:
+""
+}"
+onclick="setEquipFilter('${slot}')">
+${mark}${label}
+</button>
+`;
   }
 
-  else if(
-    ["head","armor","pants","gloves"]
-    .includes(slot)
-  ){
-    e.def=value*2;
-    e.hp=value*5;
-  }
-
-  else if(
-    ["shoes","wing"]
-    .includes(slot)
-  ){
-    e.def=value;
-    e.hp=value*3;
-  }
-
-  else{
-    e.atk=value;
-    e.hp=value*2;
-  }
-
-  return e;
+  setHTML("slotButtons",html);
 }
 
-function randomOption(rarity,slot){
+function drawBulkSellButtons(){
 
-  let list=[
-    "HP増加",
-    "攻撃力増加",
-    "防御力増加",
-    "獲得経験値増加",
-    "獲得ゴールド増加",
-    "獲得ガチャアイテム増加",
-    "獲得強化素材増加",
-    "獲得覚醒素材増加",
-    "ゲーム速度上昇",
-    "連撃率上昇",
-    "階層スキップ数"
-  ];
+  let html="";
 
-  if(slot==="shoes"){
-    list=list.concat([
-      "ゲーム速度上昇",
-      "ゲーム速度上昇"
-    ]);
+  for(const r of unlockedRarities()){
+
+    html+=`
+<button onclick="sellAll('${r}')">
+${r}以下売却
+</button>
+`;
   }
 
-  if(slot==="wing"){
-    list=list.concat([
-      "階層スキップ数",
-      "階層スキップ数"
-    ]);
+  setHTML("bulkSellButtons",html);
+}
+
+function drawAutoSell(){
+
+  let html=`
+<option value="off">
+OFF
+</option>
+`;
+
+  for(const r of unlockedRarities()){
+
+    html+=`
+<option value="${r}" ${player.autoSell===r?"selected":""}>
+${r}以下
+</option>
+`;
   }
 
-  if(slot==="bracelet"){
-    list=list.concat([
-      "連撃率上昇",
-      "連撃率上昇"
-    ]);
+  setHTML("autoSellSelect",html);
+
+  const el=document.getElementById("autoSellSelect");
+
+  if(el){
+    el.value=player.autoSell;
   }
-
-  if(slot==="necklace"){
-    list=list.concat([
-      "獲得経験値増加",
-      "獲得ゴールド増加"
-    ]);
-  }
-
-  if(slot==="pet"){
-    list=list.concat([
-      "獲得ガチャアイテム増加",
-      "獲得強化素材増加",
-      "獲得覚醒素材増加"
-    ]);
-  }
-
-  const r=rarityIndex(rarity);
-
-  const min=1+r*5;
-
-  const max=Math.min(
-    100,
-    min+4+r*2
-  );
-
-  return (
-    list[rand(0,list.length-1)]+
-    " +"+
-    rand(min,max)+
-    "%"
-  );
 }
 
-function isEquipped(index){
+function drawEquip(){
 
-  const e=player.equipments[index];
+  drawSlotButtons();
+  drawBulkSellButtons();
+  drawAutoSell();
 
-  if(!e)return false;
+  let html="";
 
-  return Object.values(player.equipped)
-    .includes(e.id);
-}
+  const list=sortedEquipments();
 
-function equipItem(index){
+  if(list.length===0){
 
-  const e=player.equipments[index];
-
-  if(!e)return;
-
-  player.equipped[e.slot]=e.id;
-
-  showEffect(
-    slotName(e.slot)+"装備"
-  );
-
-  saveGame();
-  drawAll();
-}
-
-function removeEquipment(index){
-
-  const e=player.equipments[index];
-
-  if(!e)return;
-
-  for(const key in player.equipped){
-
-    if(player.equipped[key]===e.id){
-      player.equipped[key]=null;
-    }
-  }
-
-  player.equipments.splice(index,1);
-}
-
-function sellGain(e){
-
-  const r=rarityIndex(e.rarity);
-
-  return {
-    upgrade:1+r*3+e.upgrade,
-    awake:Math.floor(r/2)+e.awake
-  };
-}
-
-function sellEquip(index){
-
-  if(isEquipped(index)){
-    showEffect("装備中は売却不可");
-    return;
-  }
-
-  const e=player.equipments[index];
-
-  if(!e)return;
-
-  const gain=sellGain(e);
-
-  player.upgradeStone+=gain.upgrade;
-  player.awakeStone+=gain.awake;
-
-  removeEquipment(index);
-
-  showEffect(
-    "売却 強化+"+
-    gain.upgrade+
-    " 覚醒+"+
-    gain.awake
-  );
-
-  saveGame();
-  drawAll();
-}
-
-function sellAll(rarity){
-
-  const limit=rarityIndex(rarity);
-
-  let sold=0;
-  let up=0;
-  let aw=0;
-
-  for(let i=player.equipments.length-1;i>=0;i--){
-
-    const e=player.equipments[i];
-
-    if(
-      e &&
-      !isEquipped(i) &&
-      rarityIndex(e.rarity)<=limit
-    ){
-      const gain=sellGain(e);
-
-      up+=gain.upgrade;
-      aw+=gain.awake;
-      sold++;
-
-      removeEquipment(i);
-    }
-  }
-
-  player.upgradeStone+=up;
-  player.awakeStone+=aw;
-
-  showEffect(
-    sold+"個売却"
-  );
-
-  saveGame();
-  drawAll();
-}
-
-function upgradeEquip(index,times){
-
-  const e=player.equipments[index];
-
-  if(!e)return;
-
-  let done=0;
-
-  for(let i=0;i<times;i++){
-
-    if(e.upgrade>=equipLimit(e)){
-      break;
-    }
-
-    const gold=upgradeGoldCost(e);
-    const stone=upgradeStoneCost(e);
-
-    if(
-      player.gold<gold ||
-      player.upgradeStone<stone
-    ){
-      break;
-    }
-
-    player.gold-=gold;
-    player.upgradeStone-=stone;
-
-    e.upgrade++;
-
-    done++;
-  }
-
-  showEffect(
-    done>0
-    ?
-    "強化+"+done
-    :
-    "素材不足"
-  );
-
-  saveGame();
-  drawAll();
-}
-
-function upgradeEquipMax(index){
-
-  upgradeEquip(index,999999);
-}
-
-function awakeEquip(index){
-
-  const e=player.equipments[index];
-
-  if(!e)return;
-
-  const cost=awakeStoneCost(e);
-
-  if(player.awakeStone<cost){
-    showEffect("覚醒素材不足");
-    return;
-  }
-
-  player.awakeStone-=cost;
-
-  e.awake++;
-
-  showEffect("覚醒+"+e.awake);
-
-  saveGame();
-  drawAll();
-}
-
-function optionScore(e,key){
-
-  return (
-    [e.op1,e.op2,e.op3]
-    .filter(op=>op&&op.includes(key))
-    .reduce((sum,op)=>sum+getNumber(op),0)
-  );
-}
-
-function sortedEquipments(){
-
-  let list=player.equipments
-    .map((e,i)=>({e,i}));
-
-  if(equipFilter!=="all"){
-
-    list=list.filter(
-      v=>v.e.slot===equipFilter
+    setHTML(
+      "equipList",
+      `<div class="item">装備なし</div>`
     );
+
+    return;
   }
 
-  list.sort((a,b)=>{
+  for(const {e,i} of list){
 
-    const ea=a.e;
-    const eb=b.e;
+    const equipped=
+      player.equipped[e.slot]===e.id;
 
-    if(sortType==="rarity"){
-      return rarityIndex(eb.rarity)-
-      rarityIndex(ea.rarity);
-    }
+    html+=`
 
-    if(sortType==="power"){
-      return equipPower(eb)-equipPower(ea);
-    }
+<div class="item ${
+equipped
+?
+"equipped"
+:
+""
+}">
 
-    if(sortType==="upgrade"){
-      return eb.upgrade-ea.upgrade;
-    }
-
-    if(sortType==="awake"){
-      return eb.awake-ea.awake;
-    }
-
-    return b.i-a.i;
-  });
-
-  return list;
+${
+equipped
+?
+'<div style="color:gold;font-weight:bold;">【装備中】</div>'
+:
+""
 }
 
-function setEquipFilter(slot){
+<span style="
+color:${rarityColors[e.rarity]};
+font-weight:bold;
+">
+${e.rarity}
+</span>
 
-  equipFilter=slot;
+${slotName(e.slot)}
+${e.name}
 
-  drawEquip();
+<br>
+
+攻撃 +${equipFinal(e,"atk")}
+防御 +${equipFinal(e,"def")}
+HP +${equipFinal(e,"hp")}
+
+<br>
+
+品質 ${e.quality}%
+強化 +${e.upgrade}/${equipLimit(e)}
+覚醒 +${e.awake}
+
+<br>
+
+OP：
+${e.op1}
+/
+${e.op2}
+/
+${e.op3}
+
+<br>
+
+<button onclick="equipItem(${i})">
+装備
+</button>
+
+<button onclick="upgradeEquip(${i},1)">
++1
+</button>
+
+<button onclick="upgradeEquip(${i},10)">
++10
+</button>
+
+<button onclick="upgradeEquip(${i},100)">
++100
+</button>
+
+<button onclick="upgradeEquipMax(${i})">
+最大
+</button>
+
+<button onclick="awakeEquip(${i})">
+覚醒
+</button>
+
+<button onclick="sellEquip(${i})">
+売却
+</button>
+
+</div>
+`;
+  }
+
+  setHTML("equipList",html);
 }
 
-function setAutoSell(value){
+function drawPlayerUpgrade(){
 
-  player.autoSell=value;
+  setText("pointText",player.point);
 
-  saveGame();
+  setHTML("pointArea",`
 
-  drawEquip();
+<div class="item">
+<b>HP強化</b>
+<br>
+<button onclick="addStat('hp',1)">+1</button>
+<button onclick="addStat('hp',10)">+10</button>
+<button onclick="addStat('hp',100)">+100</button>
+<button onclick="addStatMax('hp')">最大</button>
+</div>
+
+<div class="item">
+<b>攻撃強化</b>
+<br>
+<button onclick="addStat('atk',1)">+1</button>
+<button onclick="addStat('atk',10)">+10</button>
+<button onclick="addStat('atk',100)">+100</button>
+<button onclick="addStatMax('atk')">最大</button>
+</div>
+
+<div class="item">
+<b>防御強化</b>
+<br>
+<button onclick="addStat('def',1)">+1</button>
+<button onclick="addStat('def',10)">+10</button>
+<button onclick="addStat('def',100)">+100</button>
+<button onclick="addStatMax('def')">最大</button>
+</div>
+`);
+
+  setHTML("goldUpgradeArea",`
+
+<div class="item">
+<b>攻撃倍率</b>
+<br>
+Lv ${player.goldAtkLv}
+<br>
+<button onclick="goldUpgrade('atk',1)">+1</button>
+<button onclick="goldUpgrade('atk',10)">+10</button>
+<button onclick="goldUpgrade('atk',100)">+100</button>
+<button onclick="goldUpgradeMax('atk')">最大</button>
+</div>
+
+<div class="item">
+<b>防御倍率</b>
+<br>
+Lv ${player.goldDefLv}
+<br>
+<button onclick="goldUpgrade('def',1)">+1</button>
+<button onclick="goldUpgrade('def',10)">+10</button>
+<button onclick="goldUpgrade('def',100)">+100</button>
+<button onclick="goldUpgradeMax('def')">最大</button>
+</div>
+`);
 }
 
-function shouldAutoSell(e){
+function drawGachaUI(){
 
-  return (
-    player.autoSell!=="off" &&
-    rarityIndex(e.rarity)<=
-    rarityIndex(player.autoSell)
+  setText("gachaLv",player.gachaLv);
+  setText("gachaExp",player.gachaExp);
+  setText("needGachaExp",needGachaExp());
+  setText("gachaStoneText",player.gachaStone);
+
+  const rates=getRates();
+
+  setHTML(
+    "rateArea",
+    rarityOrder
+      .filter(r=>rates[r]>0)
+      .map(r=>
+        `<span style="color:${rarityColors[r]}">${r}</span>：${rates[r].toFixed(2)}%`
+      )
+      .join("<br>")
   );
+}
+
+function drawDungeon(){
+
+  setText("currentDungeon",dungeonName());
+  setText("dungeonKey",player.dungeonKey);
+}
+
+function drawAll(){
+
+  drawBattle();
+  drawStatus();
+  drawEquip();
+  drawPlayerUpgrade();
+  drawGachaUI();
+  drawDungeon();
+}
+
+function openTab(id,btn){
+
+  currentTab=id;
+
+  document
+    .querySelectorAll("section")
+    .forEach(s=>s.classList.add("hidden"));
+
+  document
+    .getElementById(id)
+    .classList.remove("hidden");
+
+  document
+    .querySelectorAll(".tab")
+    .forEach(t=>t.classList.remove("activeTab"));
+
+  btn.classList.add("activeTab");
+
+  drawAll();
+}
+
+function setBattleLog(text){
+
+  setHTML("battleLog",text);
+}
+
+function addBattleLog(text){
+
+  const el=document.getElementById("battleLog");
+
+  if(el){
+    el.innerHTML+="<br>"+text;
+  }
+}
+
+function showEffect(text){
+
+  const div=document.createElement("div");
+
+  div.className="effect";
+  div.textContent=text;
+
+  document.body.appendChild(div);
+
+  setTimeout(()=>{
+    div.remove();
+  },1000);
 }
