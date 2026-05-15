@@ -27,9 +27,10 @@ button,select{background:#353545;color:white;border:none;border-radius:8px;paddi
 </head>
 <body>
 
-<div id="version">ver 4.0.2</div>
+<div id="version">ver 4.0.3</div>
 
 <div id="game">
+
 <section id="battleTab">
 <div class="panel">
 <div class="title"><span id="dungeonName"></span> <span id="floorText"></span></div>
@@ -102,8 +103,10 @@ button,select{background:#353545;color:white;border:none;border-radius:8px;paddi
 <button onclick="changeDungeon('upgrade')">強化素材</button>
 <button onclick="changeDungeon('awake')">覚醒素材</button>
 <button onclick="changeDungeon('gacha')">ガチャ</button>
+<div style="color:#aaa;font-size:13px;margin-top:8px;">特化ダンジョンは鍵を1個消費。通常5Fごとのボス撃破で鍵入手。</div>
 </div>
 </section>
+
 </div>
 
 <div class="tabBar">
@@ -129,6 +132,7 @@ function normalizePlayer(p){
   if(!Array.isArray(p.equipments))p.equipments=[];
   p.equipments.forEach(e=>{
     if(!e.id)e.id=Date.now()+"_"+Math.random().toString(36).slice(2);
+    e.id=String(e.id);
     if(!e.op1)e.op1=e.option1||"HP増加 +0%";
     if(!e.op2)e.op2=e.option2||"攻撃力増加 +0%";
     if(!e.op3)e.op3=e.option3||"防御力増加 +0%";
@@ -142,9 +146,10 @@ function normalizePlayer(p){
   for(let [slot] of slots){
     if(typeof p.equipped[slot]==="number"){
       const e=p.equipments[p.equipped[slot]];
-      p.equipped[slot]=e?e.id:null;
+      p.equipped[slot]=e?String(e.id):null;
     }
-    if(p.equipped[slot]&&!p.equipments.some(e=>e.id===p.equipped[slot]))p.equipped[slot]=null;
+    if(p.equipped[slot])p.equipped[slot]=String(p.equipped[slot]);
+    if(p.equipped[slot]&&!p.equipments.some(e=>String(e.id)===String(p.equipped[slot])))p.equipped[slot]=null;
   }
   return p;
 }
@@ -163,7 +168,7 @@ function enemyName(){return["スライム","ゴブリン","オーク","ドラゴ
 function needExp(){return Math.floor(50*Math.pow(1.18,player.level))}
 function needGachaExp(){return Math.floor(10+player.gachaLv*5)}
 function goldCost(lv){return Math.floor(100*Math.pow(1.25,lv))}
-function getNum(t){let m=String(t).match(/\d+/);return m?Number(m[0]):0}
+function getNum(t){let m=String(t||"").match(/\d+/);return m?Number(m[0]):0}
 function unlockedRarities(){return rarityOrder.slice(0,Math.min(rarityOrder.length,Math.floor((player.gachaLv-1)/8)+1))}
 
 function resetBonus(){bonus={hp:0,atk:0,def:0,exp:0,gold:0,gacha:0,upgrade:0,awake:0,speed:0,multi:0,skip:0}}
@@ -196,7 +201,7 @@ function calcStats(){
   let atk=player.baseAtk*(1+player.goldAtkLv*.1),def=player.baseDef*(1+player.goldDefLv*.1),hp=player.baseHp;
   for(let s of slots){
     let id=player.equipped[s[0]];
-    let e=player.equipments.find(x=>x.id===id);
+    let e=player.equipments.find(x=>String(x.id)===String(id));
     if(e){
       atk+=equipFinal(e,"atk");
       def+=equipFinal(e,"def");
@@ -222,7 +227,7 @@ function randomOp(rarity,slot){
 function createEquipment(){
   let rarity=rollRarity(),r=rarityIndex(rarity),slot=slots[rand(0,slots.length-1)][0],q=rand(85,115);
   let val=Math.floor(rand(1+r*8,8+r*12)*Math.pow(1.08,player.floor)*q/100);
-  let e={id:Date.now()+"_"+Math.random().toString(36).slice(2),slot,name:equipName(slot),rarity,quality:q,atk:0,def:0,hp:0,upgrade:0,awake:0,op1:randomOp(rarity,slot),op2:randomOp(rarity,slot),op3:randomOp(rarity,slot)};
+  let e={id:String(Date.now()+"_"+Math.random().toString(36).slice(2)),slot,name:equipName(slot),rarity,quality:q,atk:0,def:0,hp:0,upgrade:0,awake:0,op1:randomOp(rarity,slot),op2:randomOp(rarity,slot),op3:randomOp(rarity,slot)};
   if(slot==="weapon")e.atk=val*3;
   else if(["head","armor","pants","gloves"].includes(slot)){e.def=val*2;e.hp=val*5}
   else if(["shoes","wing"].includes(slot)){e.def=val;e.hp=val*3}
@@ -231,21 +236,21 @@ function createEquipment(){
 }
 
 function equipItem(id){
-  let e=player.equipments.find(x=>x.id===id);
+  let e=player.equipments.find(x=>String(x.id)===String(id));
   if(!e)return;
-  player.equipped[e.slot]=e.id;
+  player.equipped[e.slot]=String(e.id);
   show("装備変更");
   saveGame();
-  drawEquip();
-  drawStatus();
+  drawAll();
 }
 
-function isEquipped(i){let e=player.equipments[i];return e&&Object.values(player.equipped).includes(e.id)}
+function isEquipped(i){let e=player.equipments[i];return e&&Object.values(player.equipped).some(id=>String(id)===String(e.id))}
 function sellGain(e){let r=rarityIndex(e.rarity);return{u:1+r*3+e.upgrade,a:Math.floor(r/2)+e.awake}}
 
 function sellEquip(i){
   if(isEquipped(i)){show("装備中は売却不可");return}
   let e=player.equipments[i],g=sellGain(e);
+  if(!e)return;
   player.upgradeStone+=g.u;
   player.awakeStone+=g.a;
   player.equipments.splice(i,1);
@@ -386,6 +391,7 @@ function attack(){
   let dmg=Math.max(1,player.atk-Math.floor(player.floor/2));
   enemy.hp-=dmg;
   let log="与ダメージ："+dmg;
+
   if(Math.random()*100<bonus.multi){
     enemy.hp-=dmg;
     log+="<br>連撃！+"+dmg;
@@ -493,20 +499,28 @@ function drawStatus(){
 
 function drawEquip(){
   let sh=`<button class="${equipFilter==="all"?"activeSlot":""}" onclick="setEquipFilter('all')">全部</button>`;
-  for(let[s,l]of slots)sh+=`<button class="${equipFilter===s?"activeSlot":""}" onclick="setEquipFilter('${s}')">${player.equipped[s]?"★":""}${l}</button>`;
+  for(let[s,l]of slots){
+    sh+=`<button class="${equipFilter===s?"activeSlot":""}" onclick="setEquipFilter('${s}')">${player.equipped[s]?"★":""}${l}</button>`;
+  }
   setHTML("slotButtons",sh);
 
   let bs="";
-  for(let r of unlockedRarities())bs+=`<button onclick="sellAll('${r}')">${r}以下売却</button>`;
+  for(let r of unlockedRarities()){
+    bs+=`<button onclick="sellAll('${r}')">${r}以下売却</button>`;
+  }
   setHTML("bulkSellButtons",bs);
 
   setHTML("autoSellSelect",`<option value="off">OFF</option>`+unlockedRarities().map(r=>`<option value="${r}" ${player.autoSell===r?"selected":""}>${r}以下</option>`).join(""));
 
   let html="",list=sortedEquipments();
-  if(!list.length){setHTML("equipList",`<div class="item">装備なし</div>`);return}
+  if(!list.length){
+    setHTML("equipList",`<div class="item">装備なし</div>`);
+    return;
+  }
 
   for(let{e,i}of list){
-    let eq=player.equipped[e.slot]===e.id;
+    let eq=String(player.equipped[e.slot])===String(e.id);
+
     html+=`<div class="item ${eq?"equipped":""}">
 ${eq?'<div style="color:gold;font-weight:bold;">【装備中】</div>':""}
 <span style="color:${rarityColors[e.rarity]};font-weight:bold;">${e.rarity}</span> ${slotName(e.slot)} ${e.name}<br>
@@ -523,6 +537,7 @@ OP:${e.op1} / ${e.op2} / ${e.op3}<br>
 <button onclick="sellEquip(${i})">売却</button>
 </div>`;
   }
+
   setHTML("equipList",html);
 }
 
